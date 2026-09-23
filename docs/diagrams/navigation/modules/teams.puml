@@ -1,0 +1,25 @@
+@startuml MatchdayTeamsNavigation
+title Navegación interna - Equipos y jugadores
+
+left to right direction
+skinparam linetype ortho
+
+rectangle "Equipos\n/teams" as Teams
+rectangle "Detalle de equipo\n/teams/:id" as TeamDetail
+rectangle "Jugadores\n/players" as Players
+rectangle "Detalle de jugador\n/players/:id" as PlayerDetail
+rectangle "Crear equipo\n/teams/register" as Register
+rectangle "Confirmación\n/teams/register/success" as Success
+rectangle "Administración\n/teams/manage" as Manage
+
+Teams --> TeamDetail : abrir equipo
+Teams --> Players : ver jugadores
+Teams --> Register : crear
+Teams --> Manage : administrar
+TeamDetail --> PlayerDetail : abrir plantilla
+Players --> PlayerDetail : abrir jugador
+PlayerDetail --> TeamDetail : volver al equipo
+Register --> Success : confirmar
+Success --> TeamDetail : ver resultado
+Manage --> TeamDetail : consultar cambios
+@enduml

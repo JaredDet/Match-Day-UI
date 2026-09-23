@@ -14,8 +14,7 @@ async function share() {
       status.value = "Enlace copiado";
     }
   } catch (error) {
-    if ((error as Error).name !== "AbortError")
-      status.value = "No se pudo compartir el enlace";
+    if ((error as Error).name !== "AbortError") status.value = "No se pudo compartir el enlace";
   }
 }
 </script>

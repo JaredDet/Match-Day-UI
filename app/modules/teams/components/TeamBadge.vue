@@ -10,11 +10,6 @@ const crestSource = computed(() => props.src || teamCrestDataUri(props.name));
 </template>
 
 <style scoped>
-
-
-
-
-
 .team-badge {
   display: inline-block;
   width: 34px;
@@ -30,11 +25,7 @@ const crestSource = computed(() => props.src || teamCrestDataUri(props.name));
   height: 100%;
   object-fit: contain;
   /* Follow the image's alpha contour instead of outlining its rectangular box. */
-  filter:
-    drop-shadow(1px 0 0 white)
-    drop-shadow(-1px 0 0 white)
-    drop-shadow(0 1px 0 white)
+  filter: drop-shadow(1px 0 0 white) drop-shadow(-1px 0 0 white) drop-shadow(0 1px 0 white)
     drop-shadow(0 -1px 0 white);
 }
 </style>
-

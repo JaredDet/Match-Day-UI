@@ -1,8 +1,6 @@
 <template>
   <footer>
-    <NuxtLink class="brand" to="/">
-      matchday<span class="brand-dot">.</span>
-    </NuxtLink>
+    <NuxtLink class="brand" to="/"> matchday<span class="brand-dot">.</span> </NuxtLink>
     <span>Hecho para quienes viven el fútbol.</span>
     <NuxtLink class="kickoff-link" to="/">EL PARTIDO EMPIEZA AQUÍ →</NuxtLink>
   </footer>

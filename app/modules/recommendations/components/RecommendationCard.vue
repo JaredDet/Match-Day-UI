@@ -19,11 +19,7 @@ const initials = (name?: string) =>
 <template>
   <article class="recommendation-card">
     <NuxtLink :to="item.path" class="visual" tabindex="-1" aria-hidden="true">
-      <AppImage
-        v-if="item.image"
-        :src="item.image"
-        :alt="`Imagen de ${item.title}`"
-      />
+      <AppImage v-if="item.image" :src="item.image" :alt="`Imagen de ${item.title}`" />
       <div v-else-if="item.kind === 'match'" class="match-visual">
         <span>{{ initials(item.homeTeam) }}</span>
         <strong>{{ item.homeScore }}<i>–</i>{{ item.awayScore }}</strong>
@@ -41,11 +37,7 @@ const initials = (name?: string) =>
       <p>{{ item.description }}</p>
       <p class="reason">{{ item.reason }}</p>
       <ActionLink :to="item.path">{{
-        item.kind === "match"
-          ? "Ver partido"
-          : item.kind === "news"
-            ? "Leer noticia"
-            : "Explorar"
+        item.kind === "match" ? "Ver partido" : item.kind === "news" ? "Leer noticia" : "Explorar"
       }}</ActionLink>
     </div>
   </article>
@@ -110,11 +102,7 @@ const initials = (name?: string) =>
   content: "";
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(
-    90deg,
-    transparent 0 48px,
-    #ffffff07 49px 50px
-  );
+  background: repeating-linear-gradient(90deg, transparent 0 48px, #ffffff07 49px 50px);
 }
 .match-visual span {
   z-index: 1;
@@ -201,11 +189,7 @@ a:focus-visible {
   background: linear-gradient(135deg, #edf5e8, #dfeadc 58%, #d2e1cd);
 }
 :global(html[data-theme="light"]) .match-visual:after {
-  background: repeating-linear-gradient(
-    90deg,
-    transparent 0 48px,
-    #29442c0a 49px 50px
-  );
+  background: repeating-linear-gradient(90deg, transparent 0 48px, #29442c0a 49px 50px);
 }
 :global(html[data-theme="light"]) .match-visual strong {
   color: #18301e;

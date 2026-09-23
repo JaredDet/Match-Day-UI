@@ -7,9 +7,7 @@ import AppHeader from "~/components/AppHeader.vue";
 const props = defineProps<{ error: NuxtError }>();
 const isNotFound = computed(() => props.error.statusCode === 404);
 const title = computed(() =>
-  isNotFound.value
-    ? "Esta página quedó fuera de juego"
-    : "No pudimos cargar esta página",
+  isNotFound.value ? "Esta página quedó fuera de juego" : "No pudimos cargar esta página",
 );
 const description = computed(() =>
   isNotFound.value
@@ -40,9 +38,7 @@ useHead({ title: computed(() => `${props.error.statusCode} · Matchday`) });
           <h1>{{ title }}</h1>
           <p class="description">{{ description }}</p>
           <div class="actions">
-            <button class="primary" @click="leaveError('/')">
-              Volver al inicio
-            </button>
+            <button class="primary" @click="leaveError('/')">Volver al inicio</button>
             <button @click="leaveError('/tournaments')">Ver torneos</button>
           </div>
         </div>
@@ -52,10 +48,9 @@ useHead({ title: computed(() => `${props.error.statusCode} · Matchday`) });
           <div class="pitch">
             <span class="halfway"></span><span class="centre-circle"></span>
             <span class="penalty-area"></span><span class="goal"></span>
-            <span class="player player-one"></span
-            ><span class="player player-two"></span
-            ><span class="player player-three"></span>
-            <span class="ball">⚽</span><span class="ball-shadow"></span>
+            <span class="player player-one"></span><span class="player player-two"></span
+            ><span class="player player-three"></span> <span class="ball">⚽</span
+            ><span class="ball-shadow"></span>
           </div>
           <p>El balón sigue rodando</p>
         </div>

@@ -1,21 +1,63 @@
-import { useRecommendationCatalog } from '~/modules/recommendations/composables/useRecommendationCatalog'
-import { cleanHistory, rankContent, recommendationSections } from '~/modules/recommendations/utils/ranking'
-import type { NavigationSignal } from '~/modules/recommendations/types/recommendations'
+﻿import { useRepositories } from "~/core/api/repository-context";
+import type { RecommendationItemDto } from "~/modules/recommendations/domain/recommendation-repository";
+import type { Recommendation } from "~/modules/recommendations/types/recommendations";
 
-export const HISTORY_STORAGE_KEY = 'matchday-navigation-v1'
+const reasonLabels: Record<RecommendationItemDto["reason"], string> = {
+  similar_visitors: "Visitantes con gustos similares también exploraron este contenido",
+  team_interest: "Relacionado directamente con los equipos que más consultas",
+  tournament_interest: "Relacionado con los torneos que visitas con frecuencia",
+  recent_content: "Contenido reciente para mantenerte al día",
+  live_match: "Partido en vivo ahora",
+  discovery: "Una opción nueva para descubrir",
+};
+
+function adapt(item: RecommendationItemDto): Recommendation {
+  const collection = {
+    match: "matches",
+    news: "news",
+    tournament: "tournaments",
+    team: "teams",
+    player: "players",
+  }[item.kind];
+  return {
+    key: `${item.kind}:${item.id}`,
+    kind: item.kind,
+    title: item.title,
+    path: `/${collection}/${item.id}`,
+    description: item.preview,
+    teams: [],
+    tournaments: [],
+    score: item.score,
+    affinity: item.reason === "team_interest" ? 1 : 0,
+    reason: reasonLabels[item.reason],
+    preferredTeam: item.reason === "team_interest",
+  };
+}
 
 export function useRecommendations() {
-  const history = useState<NavigationSignal[]>('recommendation-history', () => [])
-  const now = useState('recommendation-time', () => Date.now())
-  const catalog = useRecommendationCatalog()
-  const sections = computed(() => recommendationSections(rankContent(catalog.value, history.value, now.value), history.value))
-  const personalized = computed(() => cleanHistory(history.value, now.value).some(s => catalog.value.some(c => c.key === s.key)))
-  const clearedAt = useState('recommendation-cleared-at', () => 0)
-  function clearHistory() {
-    history.value = []
-    now.value = Date.now()
-    clearedAt.value = now.value
-    try { localStorage.removeItem(HISTORY_STORAGE_KEY) } catch { /* Storage may be unavailable. Session state still works. */ }
+  const repository = useRepositories().recommendations;
+  const clearedAt = useState("recommendation-cleared-at", () => 0);
+  const query = useAsyncData("recommendations", () => repository.get());
+  const sections = computed(() => ({
+    news: (query.data.value?.news ?? []).map(adapt),
+    matches: (query.data.value?.matches ?? []).map(adapt),
+    tournaments: (query.data.value?.tournaments ?? []).map(adapt),
+    discovery: (query.data.value?.discovery ?? []).map(adapt),
+  }));
+  async function clearHistory() {
+    await repository.clear();
+    clearedAt.value = Date.now();
+    await query.refresh();
   }
-  return { history, now, catalog, sections, personalized, clearedAt, clearHistory }
+  return {
+    sections,
+    personalized: computed(() => query.data.value?.personalized ?? false),
+    generatedAt: computed(() => query.data.value?.generated_at ?? null),
+    expiresAt: computed(() => query.data.value?.expires_at ?? null),
+    pending: query.pending,
+    error: query.error,
+    clearedAt,
+    clearHistory,
+    refresh: query.refresh,
+  };
 }

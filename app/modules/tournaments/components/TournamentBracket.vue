@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/vue/24/outline";
 import CupTie from "~/modules/tournaments/components/CupTie.vue";
-import { createBracket } from "~/modules/tournaments/data/competition";;
+import { createBracket } from "~/modules/tournaments/data/competition";
 const size = ref(16);
 const cup = computed(() => createBracket(size.value));
 const viewport = useTemplateRef<HTMLElement>("viewport");
@@ -21,7 +21,8 @@ function measure() {
   if (!el) return;
   left.value = el.scrollLeft > 2;
   right.value = el.scrollLeft + el.clientWidth < el.scrollWidth - 2;
-  if (jumpingTo.value === null) active.value = Math.min(cup.value.rounds.length - 1, Math.round(el.scrollLeft / 344));
+  if (jumpingTo.value === null)
+    active.value = Math.min(cup.value.rounds.length - 1, Math.round(el.scrollLeft / 344));
 }
 function move(direction: number) {
   viewport.value?.scrollBy({ left: direction * 344, behavior: "smooth" });
@@ -31,7 +32,10 @@ function jump(index: number) {
   jumpingTo.value = index;
   viewport.value?.scrollTo({ left: index * 344, behavior: "smooth" });
   if (jumpTimer) clearTimeout(jumpTimer);
-  jumpTimer = setTimeout(() => { jumpingTo.value = null; active.value = index; }, 500);
+  jumpTimer = setTimeout(() => {
+    jumpingTo.value = null;
+    active.value = index;
+  }, 500);
 }
 function syncArrowPosition() {
   const section = bracketSection.value;
@@ -71,7 +75,10 @@ onBeforeUnmount(() => {
 </script>
 <template>
   <div ref="bracketSection" class="cup-browser">
-    <div class="cup-toolbar"><span>16 clasificados · Eliminación directa</span><span>Desliza para recorrer las rondas</span></div>
+    <div class="cup-toolbar">
+      <span>16 clasificados · Eliminación directa</span
+      ><span>Desliza para recorrer las rondas</span>
+    </div>
     <nav class="cup-rounds" aria-label="Ir a una ronda">
       <button
         v-for="(round, index) in cup.rounds"
@@ -102,16 +109,9 @@ onBeforeUnmount(() => {
           <ChevronLeftIcon />
         </button>
         <div :key="size" class="cup-canvas">
-          <section
-            v-for="(round, index) in cup.rounds"
-            :key="round.name"
-            class="cup-column"
-          >
+          <section v-for="(round, index) in cup.rounds" :key="round.name" class="cup-column">
             <h3>{{ round.name }}</h3>
-            <div
-              class="cup-slots"
-              :style="{ height: `${cup.rounds[0]!.ties.length * 172}px` }"
-            >
+            <div class="cup-slots" :style="{ height: `${cup.rounds[0]!.ties.length * 172}px` }">
               <div
                 v-for="(tie, tieIndex) in round.ties"
                 :key="tie.id"
@@ -153,13 +153,9 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-
 button:hover {
   color: var(--accent);
 }
-
-
-
 
 .cup-toolbar {
   display: flex;
@@ -396,9 +392,22 @@ button:hover {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  button, a, input { transition: color .18s ease, background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
-  button:not(:disabled):active, .primary-action:active { transform: translateY(1px); }
-  input:focus-visible { box-shadow: 0 0 0 3px var(--ui-success-soft, rgba(189, 237, 117, .12)); }
+  button,
+  a,
+  input {
+    transition:
+      color 0.18s ease,
+      background-color 0.18s ease,
+      border-color 0.18s ease,
+      box-shadow 0.18s ease,
+      transform 0.18s ease;
+  }
+  button:not(:disabled):active,
+  .primary-action:active {
+    transform: translateY(1px);
+  }
+  input:focus-visible {
+    box-shadow: 0 0 0 3px var(--ui-success-soft, rgba(189, 237, 117, 0.12));
+  }
 }
 </style>
-

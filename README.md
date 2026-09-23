@@ -1,155 +1,57 @@
 # Matchday UI
 
-## Para ti
+Frontend Nuxt de Matchday conectado a la API Django. Las pantallas públicas y de gestión consumen equipos, jugadores, partidos, noticias, torneos y recomendaciones mediante repositorios tipados.
 
-`/for-you` incorpora recomendaciones automáticas basadas exclusivamente en la
-navegación: visitas, recencia y tiempo activo. No requiere seleccionar intereses.
-El historial permanece en este navegador y se puede borrar desde la pantalla.
-Detalles del cálculo, límites y pruebas en [docs/recommendations.md](docs/recommendations.md).
+## Configuración
 
-El frontend funciona con datos demo, sin conexión a la API. Los catálogos de
-`app/modules/*/data` reflejan los conceptos del backend: noticias publicadas, temporadas,
-inscripciones, grupos y eliminatorias.
+```bash
+cp .env.example .env
+pnpm install
+pnpm dev
+```
 
-- `/tournaments/register`: inscripción de equipos existentes en una temporada.
-  Evita duplicados y bloquea 2026 porque ya tiene eliminatorias generadas.
-  Selecciona 2027 para probar y vuelve al torneo para ver los equipos inscritos.
-  Inscribir no asigna un grupo ni aplica el límite de cuatro a toda la temporada.
-- `/teams/register`: formulario por pasos que crea un equipo y su plantilla en el estado demo;
-  el equipo aparece en el catálogo y queda disponible para inscribirlo.
-- Ambos registros tienen tres pasos, permiten volver atrás conservando los datos
-  y muestran una revisión antes de confirmar. Crear equipo sigue Equipo → Plantilla
-  → Confirmar; inscribir en torneo sigue Temporada → Equipo → Confirmar.
-- Las inscripciones se comparten entre pantallas mediante `useState` y se reinician
-  al recargar. No se envían datos al backend.
-- Noticias y fichas de equipos comparten las mismas publicaciones. Los borradores
-  y las noticias programadas no aparecen en las vistas públicas.
+`NUXT_PUBLIC_API_BASE` indica la raíz de la API y por defecto vale `http://localhost:8000/api`. El navegador incluye las cookies anónimas y CSRF con `credentials: include`. El backend debe incluir el origen del frontend en `DJANGO_CORS_ALLOWED_ORIGINS` y `DJANGO_CSRF_TRUSTED_ORIGINS`.
 
-- `/news/manage`: borradores, portadas, programación y publicación demo.
-- `/tournaments/manage`: temporadas, grupos, asignaciones y eliminatorias.
-- `/matches/manage`: alineaciones, periodos, goles, tarjetas, cambios y tandas.
-
-Verificación: `pnpm build` (en PowerShell, `pnpm.cmd build`). Para comprobar la
-inscripción, añade un equipo en 2027, verifica que desaparece del selector y que
-aparece sin grupo en la pestaña Equipos. Cambia a 2026 y comprueba el bloqueo.
-
-## Organización del frontend
+## Organización
 
 ```text
 app/
-  pages/                  Entradas de rutas y definePageMeta
-  modules/
-    matches/
-    teams/
-    players/
-    news/
-    tournaments/
-  components/             Cabecera, pie y componentes compartidos
-  assets/css/main.css     Variables de tema, resets y accesibilidad base
+  core/api/                 Cliente HTTP y contexto de repositorios
+  plugins/repositories.ts   Composición de implementaciones API
+  pages/                    Entradas mínimas de rutas
+  modules/<módulo>/
+    domain/                 Interfaces de repositorio y DTOs
+    application/            Casos de uso de escritura
+    infrastructure/         Adaptadores de la API
+    composables/            Estado de consulta para las vistas
+    views/                   Pantallas
+    components/             Componentes del módulo
 ```
 
-Cada módulo agrupa sus `views`, `components`, `composables`, `data`, `types` y
-`utils` cuando los necesita. Las páginas solo importan y renderizan la vista;
-las rutas dinámicas conservan su clave de navegación en `definePageMeta`.
+Las vistas no conocen `$fetch` ni las rutas HTTP. Consultan interfaces mediante `useRepositories()` o invocan casos de uso. El plugin decide qué adaptador satisface cada interfaz.
 
-Las vistas presentan la pantalla. Los composables de registro gestionan estado
-y validaciones, y comparten el borrador o las inscripciones entre pantallas.
-Los datos de equipos pertenecen a `teams`, mientras los grupos y el cuadro
-pertenecen a `tournaments`. Los escudos se generan en `teams/utils/identity.ts`.
+Las recomendaciones no requieren cuenta. El frontend registra vistas de detalle, acumula tiempo activo cada 15 segundos y envía el último heartbeat al ocultar o cerrar la página. La cookie firmada pertenece al navegador; no se guarda en `localStorage`. Consulta [docs/recommendations.md](docs/recommendations.md) para ver el flujo completo.
 
-Los componentes y composables propios se importan explícitamente con `~/modules/...`.
-Solo los componentes de uso transversal viven en `app/components`; no se registra
-globalmente todo el contenido de los módulos. Mantener las importaciones explícitas
-permite ver las dependencias entre funcionalidades. Las utilidades de Vue y Nuxt
-siguen usando sus autoimportaciones habituales.
+Los diagramas de contexto, contenedores, componentes, secuencia y navegación entre pantallas están descritos en [docs/README.md](docs/README.md).
 
-Cada vista y componente define su CSS en un bloque `<style scoped>`, incluidas
-sus variantes de tema y sus reglas responsive. No se comparten hojas de estilos
-entre pantallas: los valores comunes se consumen mediante variables CSS.
-`main.css` no contiene clases de componentes. Los componentes compartidos son
-dueños de sus estilos; el contenido recibido por slots usa `:slotted` cuando
-necesita una regla específica. Las transiciones de navegación quedan acotadas
-al contenedor de `app.vue`.
-
-Los desplegables usan `AppSelect`: mantiene el control nativo y sus atributos de
-formulario, con una flecha a 14 px del borde y espacio reservado para el texto.
-El componente es dueño de su CSS. Las nuevas transiciones de controles, tarjetas,
-filtrado de noticias y pasos de inscripción respetan `prefers-reduced-motion`.
-
-El modo claro utiliza variables `--ui-*` para texto, superficies, bordes y estados
-de éxito/error/aviso. Los componentes conservan sus colores oscuros como valores
-de respaldo. `--accent` sirve para texto y enlaces; `--accent-fill` y `--on-accent`
-se usan en controles rellenos. Los colores del campo de juego, escudos y tarjetas
-de árbitro son independientes del tema.
-
-## Setup
-
-Make sure to install dependencies:
+## Calidad local
 
 ```bash
-# npm
-npm install
-
-# pnpm
-pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
-```
-
-## Development Server
-
-Start the development server on `http://localhost:3000`:
-
-```bash
-# npm
-npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
-```
-
-## Production
-
-Build the application for production:
-
-```bash
-# npm
-npm run build
-
-# pnpm
+pnpm format
+pnpm format:check
+pnpm test
 pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
 ```
 
-Locally preview production build:
+Prettier mantiene el formato de Vue, TypeScript, JavaScript, CSS, JSON, Markdown y YAML. Husky ejecuta `lint-staged` antes de cada commit y corrige solamente los archivos preparados. `.editorconfig` y `.gitattributes` fijan UTF-8, indentación de dos espacios, salto final real y finales de línea LF.
 
-```bash
-# npm
-npm run preview
+## Integración continua
 
-# pnpm
-pnpm preview
+GitHub Actions ejecuta en cada `push` y `pull_request`:
 
-# yarn
-yarn preview
+1. `pnpm install --frozen-lockfile`.
+2. `pnpm format:check`.
+3. `pnpm test`.
+4. `pnpm build`.
 
-# bun
-bun run preview
-```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+El workflow está en `.github/workflows/quality.yml`.

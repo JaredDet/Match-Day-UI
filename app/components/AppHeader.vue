@@ -43,22 +43,13 @@ async function showHome(onlyFavorites: boolean) {
       matchday<span class="brand-dot">.</span>
     </NuxtLink>
     <nav aria-label="Navegación principal">
-      <NuxtLink
-        class="nav-item"
-        :class="{ active: route.path === '/for-you' }"
-        to="/for-you"
+      <NuxtLink class="nav-item" :class="{ active: route.path === '/for-you' }" to="/for-you"
         >Para ti</NuxtLink
       >
-      <button
-        :class="{ active: route.path === '/' && !favoritesOnly }"
-        @click="showHome(false)"
-      >
+      <button :class="{ active: route.path === '/' && !favoritesOnly }" @click="showHome(false)">
         Partidos
       </button>
-      <button
-        :class="{ active: route.path === '/' && favoritesOnly }"
-        @click="showHome(true)"
-      >
+      <button :class="{ active: route.path === '/' && favoritesOnly }" @click="showHome(true)">
         Mis favoritos
         <AnimatedHeroIcon
           :icon="StarIcon"
@@ -67,10 +58,7 @@ async function showHome(onlyFavorites: boolean) {
           aria-hidden="true"
         />
       </button>
-      <NuxtLink
-        class="nav-item"
-        :class="{ active: route.path.startsWith('/news') }"
-        to="/news"
+      <NuxtLink class="nav-item" :class="{ active: route.path.startsWith('/news') }" to="/news"
         >Noticias</NuxtLink
       >
       <NuxtLink
@@ -82,9 +70,7 @@ async function showHome(onlyFavorites: boolean) {
       <NuxtLink
         class="nav-item"
         :class="{
-          active:
-            route.path.startsWith('/teams') ||
-            route.path.startsWith('/players'),
+          active: route.path.startsWith('/teams') || route.path.startsWith('/players'),
         }"
         to="/teams"
         >Equipos</NuxtLink
@@ -99,9 +85,7 @@ async function showHome(onlyFavorites: boolean) {
     <button
       class="theme-switch"
       type="button"
-      :aria-label="
-        isDarkTheme ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'
-      "
+      :aria-label="isDarkTheme ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
       @click="toggleTheme"
     >
       <span
@@ -212,11 +196,7 @@ button:hover {
   height: 32px;
   padding: 4px;
   border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    rgba(124, 93, 246, 0.28),
-    rgba(18, 22, 26, 0.96)
-  );
+  background: linear-gradient(90deg, rgba(124, 93, 246, 0.28), rgba(18, 22, 26, 0.96));
   border: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
   transition:
@@ -226,19 +206,11 @@ button:hover {
   overflow: hidden;
 }
 .theme-switch-track.is-light {
-  background: linear-gradient(
-    90deg,
-    rgba(247, 201, 94, 0.33),
-    rgba(247, 243, 234, 0.96)
-  );
+  background: linear-gradient(90deg, rgba(247, 201, 94, 0.33), rgba(247, 243, 234, 0.96));
   border-color: rgba(143, 110, 38, 0.08);
 }
 .theme-switch-track.is-dark {
-  background: linear-gradient(
-    90deg,
-    rgba(124, 93, 246, 0.3),
-    rgba(18, 22, 26, 0.96)
-  );
+  background: linear-gradient(90deg, rgba(124, 93, 246, 0.3), rgba(18, 22, 26, 0.96));
 }
 .theme-thumb {
   position: absolute;

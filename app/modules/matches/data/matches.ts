@@ -3,12 +3,7 @@ import { demoPositions } from "~/modules/matches/data/formations";
 import type { Match, Goal, Period } from "~/modules/matches/utils/matches";
 
 export function createDemoMatches(today: string): Match[] {
-  const names = [
-    "Atlético Santiago",
-    "Deportivo Norte",
-    "Unión del Sur",
-    "Sporting Central",
-  ];
+  const names = ["Atlético Santiago", "Deportivo Norte", "Unión del Sur", "Sporting Central"];
 
   const matches: Match[] = [
     {

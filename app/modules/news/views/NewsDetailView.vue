@@ -1,17 +1,16 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import PageHeading from "~/components/PageHeading.vue";
 
 import { newsDate } from "~/modules/news/data/news";
-import { useDemoTeams } from "~/modules/teams/composables/useDemoTeams";
-import { useDemoNews } from "~/modules/news/composables/useDemoNews";
+import { useTeams } from "~/modules/teams/composables/useTeams";
+import { useRepositories } from "~/core/api/repository-context";
+import { newsPreview } from "~/modules/news/utils/preview";
 import NewsParagraph from "~/modules/news/components/NewsParagraph.vue";
-const { teamById } = useDemoTeams();
-const { items } = useDemoNews();
+const { teamById } = useTeams();
 const route = useRoute();
-const item = computed(() =>
-  items.value.find(
-    (item) => item.id === route.params.id && item.status === "PUBLISHED",
-  ),
+const repository = useRepositories().news;
+const { data: item } = await useAsyncData(`news-detail-${route.params.id}`, () =>
+  repository.get(String(route.params.id)),
 );
 if (!item.value)
   throw createError({
@@ -20,13 +19,13 @@ if (!item.value)
   });
 useSeoMeta(() => ({
   title: `${item.value?.title} · Matchday`,
-  description: item.value?.preview,
+  description: item.value ? newsPreview(item.value.content.children) : undefined,
   ogTitle: item.value?.title,
-  ogDescription: item.value?.preview,
+  ogDescription: item.value ? newsPreview(item.value.content.children) : undefined,
   ogImage: item.value?.cover_image ?? undefined,
   ogType: "article",
   twitterTitle: item.value?.title,
-  twitterDescription: item.value?.preview,
+  twitterDescription: item.value ? newsPreview(item.value.content.children) : undefined,
   twitterImage: item.value?.cover_image ?? undefined,
 }));
 </script>
@@ -43,7 +42,8 @@ useSeoMeta(() => ({
       kicker="NOTICIAS"
       back-to="/news"
       back-label="Todas las noticias"
-    ><ShareButton :title="item.title" :text="item.preview" /></PageHeading>
+      ><ShareButton :title="item.title" :text="newsPreview(item.content.children)"
+    /></PageHeading>
     <article class="story-content">
       <div class="story-meta">
         <time v-if="item.published_at" :datetime="item.published_at">{{
@@ -55,11 +55,7 @@ useSeoMeta(() => ({
         ><span>{{ item.content.children.length }} min de lectura</span>
       </div>
       <figure>
-        <AppImage
-          :src="item.cover_image"
-          :alt="`Portada de ${item.title}`"
-          eager
-        />
+        <AppImage :src="item.cover_image" :alt="`Portada de ${item.title}`" eager />
         <figcaption>Actualidad de la Copa Matchday</figcaption>
       </figure>
       <div class="story-body">

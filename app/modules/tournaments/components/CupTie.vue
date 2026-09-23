@@ -1,15 +1,13 @@
 <script setup lang="ts">
-import TeamBadge from "~/modules/teams/components/TeamBadge.vue"
+import TeamBadge from "~/modules/teams/components/TeamBadge.vue";
 
 import { teamById } from "~/modules/teams/data/teams";
-import { type CupTie } from "~/modules/tournaments/data/competition";;
+import { type CupTie } from "~/modules/tournaments/data/competition";
 defineProps<{ tie: CupTie }>();
 </script>
 <template>
   <article class="cup-tie">
-    <small>{{
-      tie.homeScore === null ? "Fecha por confirmar" : "Finalizado"
-    }}</small>
+    <small>{{ tie.homeScore === null ? "Fecha por confirmar" : "Finalizado" }}</small>
     <div class="cup-team-group">
       <div
         class="cup-team"
@@ -41,7 +39,6 @@ defineProps<{ tie: CupTie }>();
 </template>
 
 <style scoped>
-
 .tie {
   position: relative;
   border: 1px solid var(--ui-border, #3c4735);
@@ -49,9 +46,6 @@ defineProps<{ tie: CupTie }>();
   background: var(--ui-surface, #1e231d);
   padding: 14px 18px;
 }
-
-
-
 
 .cup-tie {
   padding: 16px 20px;
@@ -127,15 +121,36 @@ defineProps<{ tie: CupTie }>();
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  button, a, input { transition: color .18s ease, background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
-  button:not(:disabled):active, .primary-action:active { transform: translateY(1px); }
-  input:focus-visible { box-shadow: 0 0 0 3px var(--ui-success-soft, rgba(189, 237, 117, .12)); }
+  button,
+  a,
+  input {
+    transition:
+      color 0.18s ease,
+      background-color 0.18s ease,
+      border-color 0.18s ease,
+      box-shadow 0.18s ease,
+      transform 0.18s ease;
+  }
+  button:not(:disabled):active,
+  .primary-action:active {
+    transform: translateY(1px);
+  }
+  input:focus-visible {
+    box-shadow: 0 0 0 3px var(--ui-success-soft, rgba(189, 237, 117, 0.12));
+  }
 }
 @media (prefers-reduced-motion: no-preference) {
-.cup-tie { transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+  .cup-tie {
+    transition:
+      transform 0.2s ease,
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
 }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
-.cup-tie:hover { transform: translateY(-2px); box-shadow: 0 6px 18px var(--shadow); }
+  .cup-tie:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px var(--shadow);
+  }
 }
 </style>
-

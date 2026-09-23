@@ -1,19 +1,64 @@
-import { useTournamentManagement } from '~/modules/tournaments/composables/useTournamentManagement'
-import { useDemoTeams } from '~/modules/teams/composables/useDemoTeams'
+import { useRepositories } from "~/core/api/repository-context";
+import { useTeams } from "~/modules/teams/composables/useTeams";
+import { EnrollTeamUseCase } from "~/modules/tournaments/application/enroll-team-use-case";
+import { useTournaments } from "~/modules/tournaments/composables/useTournaments";
+
 export function useTournamentRegistration() {
-  const manager = useTournamentManagement(), { teams } = useDemoTeams(), route = useRoute()
-  const seasonId = ref(manager.seasons.value.find(s => s.id === route.query.season)?.id ?? 'season-2027')
-  const tournament = computed(() => manager.tournaments.value.find(t => t.id === manager.seasons.value.find(s => s.id === seasonId.value)?.tournament) ?? manager.tournaments.value[0]!)
-  const seasons = manager.seasons
-  const teamId = ref(''), message = ref(''), error = ref('')
-  const enrolled = computed(() => manager.registrations.value[seasonId.value] ?? [])
-  const locked = computed(() => manager.locked(seasonId.value))
-  const available = computed(() => teams.value.filter(t => !enrolled.value.includes(t.id)))
-  watch(seasonId, () => { teamId.value = ''; message.value = ''; error.value = '' })
-  function register() {
-    error.value = ''; message.value = ''
-    try { manager.enroll(seasonId.value,teamId.value); message.value = `${teams.value.find(t => t.id === teamId.value)?.name} se inscribi\u00f3 en ${manager.seasons.value.find(s => s.id === seasonId.value)?.name}.`; teamId.value = '' }
-    catch(e) { error.value = (e as Error).message }
+  const repository = useRepositories().tournaments;
+  const enrollTeam = new EnrollTeamUseCase(repository);
+  const catalog = useTournaments();
+  const { teams } = useTeams();
+  const route = useRoute();
+  const seasonId = ref(String(route.query.season ?? catalog.seasons.value[0]?.id ?? ""));
+  const teamId = ref("");
+  const message = ref("");
+  const error = ref("");
+  const tournament = computed(() => {
+    const season = catalog.seasons.value.find((item) => item.id === seasonId.value);
+    return (
+      catalog.tournaments.value.find((item) => item.id === season?.tournament) ??
+      catalog.tournaments.value[0]
+    );
+  });
+  const enrolled = computed(
+    () => catalog.seasons.value.find((item) => item.id === seasonId.value)?.teams ?? [],
+  );
+  const available = computed(() => teams.value.filter((team) => !enrolled.value.includes(team.id)));
+  const phases = useAsyncData("registration-phases", () => repository.listPhases(), {
+    default: () => [],
+  });
+  const locked = computed(() =>
+    phases.data.value.some((phase) => phase.season === seasonId.value && phase.generated),
+  );
+  watch(seasonId, () => {
+    teamId.value = "";
+    message.value = "";
+    error.value = "";
+  });
+  async function register() {
+    error.value = "";
+    message.value = "";
+    try {
+      await enrollTeam.execute(seasonId.value, teamId.value);
+      const teamName = teams.value.find((team) => team.id === teamId.value)?.name;
+      await catalog.refreshSeasons();
+      message.value = `${teamName} se inscribió correctamente.`;
+      teamId.value = "";
+    } catch (exception) {
+      error.value = (exception as Error).message;
+      throw exception;
+    }
   }
-  return { tournament, seasons, seasonId, teamId, enrolled, locked, available, message, error, register }
+  return {
+    tournament,
+    seasons: catalog.seasons,
+    seasonId,
+    teamId,
+    enrolled,
+    locked,
+    available,
+    message,
+    error,
+    register,
+  };
 }

@@ -1,22 +1,120 @@
 export const teams = [
-  { id: '0', name: 'Atlético Santiago', city: 'Santiago', stadium: 'Estadio Capital', coach: 'Ricardo Valdés', founded: 1932 },
-  { id: '1', name: 'Deportivo Norte', city: 'Antofagasta', stadium: 'Estadio del Norte', coach: 'Martín Acuña', founded: 1948 },
-  { id: '2', name: 'Unión del Sur', city: 'Concepción', stadium: 'Estadio del Parque', coach: 'Ricardo Valdés', founded: 1926 },
-  { id: '3', name: 'Sporting Central', city: 'Valparaíso', stadium: 'Estadio Central', coach: 'Martín Acuña', founded: 1954 },
-  { id: '4', name: 'Puerto Azul', city: 'Coquimbo', stadium: 'Estadio del Puerto', coach: 'Javier Lagos', founded: 1961 },
-  { id: '5', name: 'Deportivo Cordillera', city: 'Rancagua', stadium: 'Estadio Los Andes', coach: 'Felipe Rivas', founded: 1940 },
-  { id: '6', name: 'Real del Valle', city: 'Talca', stadium: 'Estadio del Valle', coach: 'Pablo Soto', founded: 1937 },
-  { id: '7', name: 'Estrella Austral', city: 'Temuco', stadium: 'Estadio Austral', coach: 'Diego Leiva', founded: 1950 },
-]
-const places = ['Arica', 'Iquique', 'Copiapó', 'La Serena', 'Ovalle', 'Quillota', 'Los Andes', 'San Felipe', 'Viña del Mar', 'Melipilla', 'San Antonio', 'Curicó', 'Linares', 'Chillán', 'Los Ángeles', 'Valdivia', 'Osorno', 'Puerto Montt', 'Castro', 'Coyhaique', 'Punta Arenas', 'Calama', 'Vallenar', 'Angol', 'Villarrica', 'Lautaro', 'Constitución', 'Rengo']
+  {
+    id: "0",
+    name: "Atlético Santiago",
+    city: "Santiago",
+    stadium: "Estadio Capital",
+    coach: "Ricardo Valdés",
+    founded: 1932,
+  },
+  {
+    id: "1",
+    name: "Deportivo Norte",
+    city: "Antofagasta",
+    stadium: "Estadio del Norte",
+    coach: "Martín Acuña",
+    founded: 1948,
+  },
+  {
+    id: "2",
+    name: "Unión del Sur",
+    city: "Concepción",
+    stadium: "Estadio del Parque",
+    coach: "Ricardo Valdés",
+    founded: 1926,
+  },
+  {
+    id: "3",
+    name: "Sporting Central",
+    city: "Valparaíso",
+    stadium: "Estadio Central",
+    coach: "Martín Acuña",
+    founded: 1954,
+  },
+  {
+    id: "4",
+    name: "Puerto Azul",
+    city: "Coquimbo",
+    stadium: "Estadio del Puerto",
+    coach: "Javier Lagos",
+    founded: 1961,
+  },
+  {
+    id: "5",
+    name: "Deportivo Cordillera",
+    city: "Rancagua",
+    stadium: "Estadio Los Andes",
+    coach: "Felipe Rivas",
+    founded: 1940,
+  },
+  {
+    id: "6",
+    name: "Real del Valle",
+    city: "Talca",
+    stadium: "Estadio del Valle",
+    coach: "Pablo Soto",
+    founded: 1937,
+  },
+  {
+    id: "7",
+    name: "Estrella Austral",
+    city: "Temuco",
+    stadium: "Estadio Austral",
+    coach: "Diego Leiva",
+    founded: 1950,
+  },
+];
+const places = [
+  "Arica",
+  "Iquique",
+  "Copiapó",
+  "La Serena",
+  "Ovalle",
+  "Quillota",
+  "Los Andes",
+  "San Felipe",
+  "Viña del Mar",
+  "Melipilla",
+  "San Antonio",
+  "Curicó",
+  "Linares",
+  "Chillán",
+  "Los Ángeles",
+  "Valdivia",
+  "Osorno",
+  "Puerto Montt",
+  "Castro",
+  "Coyhaique",
+  "Punta Arenas",
+  "Calama",
+  "Vallenar",
+  "Angol",
+  "Villarrica",
+  "Lautaro",
+  "Constitución",
+  "Rengo",
+];
 for (let i = 8; i < 64; i++) {
-  const city = places[(i - 8) % places.length]!
-  teams.push({ id: String(i), name: `${i < 36 ? 'Deportivo' : 'Unión'} ${city}`, city, stadium: `Estadio de ${city}`, coach: 'Javier Rojas', founded: 1920 + i })
+  const city = places[(i - 8) % places.length]!;
+  teams.push({
+    id: String(i),
+    name: `${i < 36 ? "Deportivo" : "Unión"} ${city}`,
+    city,
+    stadium: `Estadio de ${city}`,
+    coach: "Javier Rojas",
+    founded: 1920 + i,
+  });
 }
-export const teamById = (id: string) => teams.find(team => team.id === id)!
+export const teamById = (id: string) => teams.find((team) => team.id === id)!;
 export const squad = [
-  { role: 'Porteros', players: ['1|C. Herrera', '12|G. Arias'] },
-  { role: 'Defensas', players: ['2|F. Soto', '4|R. Pérez', '5|N. Díaz', '3|S. Leiva', '14|I. Reyes'] },
-  { role: 'Mediocampistas', players: ['6|P. Vidal', '8|A. Fuentes', '10|E. Morales', '16|L. Pizarro', '18|V. Rivas'] },
-  { role: 'Delanteros', players: ['7|M. Torres', '9|J. Rojas', '11|B. Castro'] },
-]
+  { role: "Porteros", players: ["1|C. Herrera", "12|G. Arias"] },
+  {
+    role: "Defensas",
+    players: ["2|F. Soto", "4|R. Pérez", "5|N. Díaz", "3|S. Leiva", "14|I. Reyes"],
+  },
+  {
+    role: "Mediocampistas",
+    players: ["6|P. Vidal", "8|A. Fuentes", "10|E. Morales", "16|L. Pizarro", "18|V. Rivas"],
+  },
+  { role: "Delanteros", players: ["7|M. Torres", "9|J. Rojas", "11|B. Castro"] },
+];

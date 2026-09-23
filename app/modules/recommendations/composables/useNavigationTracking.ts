@@ -1,40 +1,98 @@
-import { useRecommendations, HISTORY_STORAGE_KEY } from '~/modules/recommendations/composables/useRecommendations'
-import { cleanHistory, recordNavigation } from '~/modules/recommendations/utils/ranking'
+import { useRepositories } from "~/core/api/repository-context";
+import type { RecommendationKind } from "~/modules/recommendations/domain/recommendation-repository";
+
+function routeContent(path: string) {
+  const match = path.match(/^\/(teams|players|news|matches|tournaments)\/([^/]+)$/);
+  if (!match) return null;
+  const kinds: Record<string, RecommendationKind> = {
+    teams: "team",
+    players: "player",
+    news: "news",
+    matches: "match",
+    tournaments: "tournament",
+  };
+  return { kind: kinds[match[1]!]!, identifier: decodeURIComponent(match[2]!) };
+}
 
 export function useNavigationTracking() {
-  const route = useRoute()
-  const { history, catalog, now, clearedAt } = useRecommendations()
-  let timer: ReturnType<typeof setInterval> | undefined
-  let lastActivity = 0, lastTick = 0, routeStarted = 0, mounted = false
-  const activity = () => { lastActivity = Date.now() }
-  const events = ['pointerdown', 'keydown', 'scroll', 'pointermove'] as const
-  function resetClock() { lastTick = Date.now(); lastActivity = lastTick; routeStarted = lastTick }
-  function tick() {
-    const time = Date.now(), elapsed = time - lastTick
-    lastTick = time
-    now.value = time
-    if (time - routeStarted < 5000 || document.visibilityState !== 'visible' || !document.hasFocus() || time - lastActivity > 30_000 || elapsed > 10_000) return
-    const candidate = catalog.value.find(item => item.path === route.path)
-    if (!candidate) return
-    history.value = recordNavigation(history.value, candidate.key, Math.max(0, elapsed / 1000), time)
-    try { localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history.value)) } catch { /* Keep working in memory. */ }
-  }
-  watch(() => route.path, () => { if (mounted) resetClock() })
-  watch(clearedAt, resetClock)
-  onMounted(() => {
-    mounted = true
-    resetClock()
-    now.value = Date.now()
+  const route = useRoute();
+  const repository = useRepositories().recommendations;
+  let timer: ReturnType<typeof setInterval> | undefined;
+  let navigationId = "";
+  let contentId = "";
+  let contentKind: RecommendationKind | null = null;
+  let activeSeconds = 0;
+  let lastActivity = 0;
+  let lastTick = 0;
+  const events = ["pointerdown", "keydown", "scroll", "pointermove"] as const;
+  const activity = () => {
+    lastActivity = Date.now();
+  };
+  const visibility = () => {
+    if (document.hidden) void send(true);
+  };
+
+  async function begin() {
+    const content = routeContent(route.path);
+    navigationId = crypto.randomUUID();
+    contentId = "";
+    contentKind = content?.kind ?? null;
+    activeSeconds = 0;
+    lastActivity = lastTick = Date.now();
+    if (!content) return;
     try {
-      history.value = cleanHistory(JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) ?? '[]'), now.value)
-      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history.value))
-    } catch { history.value = [] }
-    events.forEach(event => window.addEventListener(event, activity, { passive: true }))
-    timer = setInterval(tick, 5000)
-  })
+      contentId = await repository.visit(content.kind, content.identifier, navigationId);
+    } catch {
+      contentId = "";
+    }
+  }
+
+  async function send(beacon = false) {
+    if (!contentKind || !contentId || activeSeconds <= 0) return;
+    await repository
+      .heartbeat(
+        {
+          navigation_id: navigationId,
+          content_kind: contentKind,
+          content_id: contentId,
+          active_seconds: Math.min(120, Math.round(activeSeconds)),
+        },
+        beacon,
+      )
+      .catch(() => undefined);
+  }
+
+  function tick() {
+    const now = Date.now();
+    const elapsed = Math.min(15, Math.max(0, (now - lastTick) / 1000));
+    lastTick = now;
+    if (
+      document.visibilityState !== "visible" ||
+      !document.hasFocus() ||
+      now - lastActivity > 30_000
+    )
+      return;
+    activeSeconds = Math.min(120, activeSeconds + elapsed);
+    void send();
+  }
+
+  watch(
+    () => route.path,
+    () => {
+      void send(true);
+      void begin();
+    },
+  );
+  onMounted(() => {
+    void begin();
+    events.forEach((event) => window.addEventListener(event, activity, { passive: true }));
+    document.addEventListener("visibilitychange", visibility);
+    timer = setInterval(tick, 15_000);
+  });
   onBeforeUnmount(() => {
-    mounted = false
-    if (timer) clearInterval(timer)
-    events.forEach(event => window.removeEventListener(event, activity))
-  })
+    if (timer) clearInterval(timer);
+    void send(true);
+    events.forEach((event) => window.removeEventListener(event, activity));
+    document.removeEventListener("visibilitychange", visibility);
+  });
 }

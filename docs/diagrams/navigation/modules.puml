@@ -1,0 +1,32 @@
+@startuml MatchdayModuleNavigation
+title Matchday UI - Comunicación entre módulos
+
+left to right direction
+skinparam linetype ortho
+skinparam packageStyle rectangle
+
+rectangle "Recomendaciones" as Recommendations
+rectangle "Partidos" as Matches
+rectangle "Noticias" as News
+rectangle "Equipos y jugadores" as Teams
+rectangle "Torneos" as Tournaments
+
+Recommendations --> Matches : partido sugerido
+Recommendations --> News : noticia sugerida
+Recommendations --> Tournaments : torneo sugerido
+
+Matches <--> Teams : participantes y plantillas
+News --> Teams : equipo relacionado
+Tournaments --> Teams : inscritos y grupos
+Tournaments --> Matches : fixtures y eliminatorias
+
+note bottom of Recommendations
+  Enlaza a las pantallas de detalle
+  existentes; no duplica contenido.
+end note
+
+note bottom of Tournaments
+  Coordina equipos y partidos mediante
+  identificadores de las APIs respectivas.
+end note
+@enduml

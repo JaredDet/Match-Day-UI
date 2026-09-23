@@ -18,10 +18,8 @@ const {
 } = useTournamentRegistration();
 const step = ref(0);
 useUnsavedChanges(computed(() => step.value > 0 || !!teamId.value));
-const selectedTeam = computed(() =>
-  available.value.find((team) => team.id === teamId.value),
-);
-function proceed() {
+const selectedTeam = computed(() => available.value.find((team) => team.id === teamId.value));
+async function proceed() {
   error.value = "";
   if (locked.value) {
     error.value = "Las inscripciones de esta temporada están cerradas.";
@@ -39,8 +37,12 @@ function proceed() {
     step.value = 2;
     return;
   }
-  register();
-  if (!error.value) step.value = 0;
+  try {
+    await register();
+    step.value = 0;
+  } catch {
+    /* El composable expone el error. */
+  }
 }
 function back() {
   error.value = "";
@@ -58,34 +60,17 @@ useHead({ title: "Inscribir equipos · Matchday" });
       :back-to="`/tournaments/${tournament.slug}?season=${seasonId}`"
       back-label="Volver al torneo"
     />
-    <RegistrationSteps
-      :labels="['Temporada', 'Equipo', 'Confirmar']"
-      :current="step"
-    />
+    <RegistrationSteps :labels="['Temporada', 'Equipo', 'Confirmar']" :current="step" />
     <Transition name="registration-step" mode="out-in"
       ><form :key="step" class="demo-form" @submit.prevent="proceed">
         <h2 aria-live="polite">
-          {{
-            [
-              "Elige la temporada",
-              "Selecciona un equipo",
-              "Revisa la inscripción",
-            ][step]
-          }}
+          {{ ["Elige la temporada", "Selecciona un equipo", "Revisa la inscripción"][step] }}
         </h2>
         <label v-if="step === 0"
           >Temporada<AppSelect v-model="seasonId"
-            ><option
-              v-for="season in seasons"
-              :key="season.id"
-              :value="season.id"
-            >
+            ><option v-for="season in seasons" :key="season.id" :value="season.id">
               {{ season.name }} ·
-              {{
-                tournament.id === season.tournament
-                  ? tournament.name
-                  : "Otro torneo"
-              }}
+              {{ tournament.id === season.tournament ? tournament.name : "Otro torneo" }}
             </option></AppSelect
           ></label
         >
@@ -98,16 +83,15 @@ useHead({ title: "Inscribir equipos · Matchday" });
           ></label
         >
         <p v-if="locked" role="status">
-          Inscripciones cerradas: esta temporada ya tiene eliminatorias
-          generadas.
+          Inscripciones cerradas: esta temporada ya tiene eliminatorias generadas.
         </p>
         <p>
-          {{ enrolled.length }} equipos inscritos. Los equipos ya inscritos no
-          aparecen en el selector.
+          {{ enrolled.length }} equipos inscritos. Los equipos ya inscritos no aparecen en el
+          selector.
         </p>
         <p>
-          La inscripción pertenece a la temporada. La asignación a grupos es un
-          paso independiente; cada grupo admite hasta
+          La inscripción pertenece a la temporada. La asignación a grupos es un paso independiente;
+          cada grupo admite hasta
           {{ tournament.max_teams_per_group }} equipos.
         </p>
         <section v-if="step === 2" class="registration-review">
@@ -123,28 +107,13 @@ useHead({ title: "Inscribir equipos · Matchday" });
           {{ message }} Puedes consultarlo en la pestaña Equipos del torneo.
         </p>
         <div class="step-actions">
-          <button
-            v-if="step > 0"
-            type="button"
-            class="text-action"
-            @click="back"
-          >
-            Atrás</button
-          ><button
-            type="submit"
-            class="primary-action"
-            :disabled="locked || !available.length"
-          >
+          <button v-if="step > 0" type="button" class="text-action" @click="back">Atrás</button
+          ><button type="submit" class="primary-action" :disabled="locked || !available.length">
             {{ step === 2 ? "Confirmar inscripción demo" : "Continuar" }}
           </button>
         </div>
-        <p v-if="!available.length">
-          Todos los equipos del catálogo ya están inscritos.
-        </p>
-        <p>
-          Los cambios se mantienen mientras navegas y se restablecen al recargar
-          la aplicación.
-        </p>
+        <p v-if="!available.length">Todos los equipos del catálogo ya están inscritos.</p>
+        <p>Los cambios se mantienen mientras navegas y se restablecen al recargar la aplicación.</p>
         <NuxtLink to="/teams/register" class="text-action"
           >Explorar la creación de un equipo</NuxtLink
         >

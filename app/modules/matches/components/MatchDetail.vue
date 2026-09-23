@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import MatchReport from "~/modules/matches/components/MatchReport.vue"
-import PlayerEvents from "~/modules/matches/components/PlayerEvents.vue"
+import MatchReport from "~/modules/matches/components/MatchReport.vue";
+import PlayerEvents from "~/modules/matches/components/PlayerEvents.vue";
 
 import type { Shootout } from "~/modules/matches/utils/shootout";
 import type { ReportEvent } from "~/modules/matches/types/report";
@@ -94,8 +94,7 @@ const squads = computed(() =>
             8,
             Math.min(
               92,
-              team.positions.find((position) => position.number === numbers[i])
-                ?.y ?? 50,
+              team.positions.find((position) => position.number === numbers[i])?.y ?? 50,
             ),
           ),
         };
@@ -108,9 +107,7 @@ const squads = computed(() =>
       side,
       coach: side === 0 ? "Ricardo Valdés" : "Martín Acuña",
       color: side === 0 ? "#282c30" : "#356d96",
-      substitutes: names
-        .slice(11)
-        .map((name, i) => ({ name, number: numbers[i + 11] })),
+      substitutes: names.slice(11).map((name, i) => ({ name, number: numbers[i + 11] })),
     };
   }),
 );
@@ -169,8 +166,7 @@ function eventsFor(team: Team, name: string, side: number): PlayerEvent[] {
     events.push({ kind: "red", label: "Tarjeta roja", minute: 86 });
   const change = substitution(side);
   if (name === change.out) {
-    if (side === 0)
-      events.push({ kind: "injury", label: "Lesión", minute: 61 });
+    if (side === 0) events.push({ kind: "injury", label: "Lesión", minute: 61 });
     events.push({
       kind: "out",
       label: `Sale por ${change.incoming}`,
@@ -183,9 +179,7 @@ function eventsFor(team: Team, name: string, side: number): PlayerEvent[] {
       label: `Entra por ${change.out}`,
       minute: change.minute,
     });
-  return events
-    .filter((event) => event.minute <= minute.value)
-    .sort((a, b) => a.minute - b.minute);
+  return events.filter((event) => event.minute <= minute.value).sort((a, b) => a.minute - b.minute);
 }
 
 const detailTabs = [
@@ -201,16 +195,10 @@ watch(
   },
 );
 function navigateTab(event: KeyboardEvent, index: number) {
-  const delta =
-    event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+  const delta = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
   if (!delta && event.key !== "Home" && event.key !== "End") return;
   event.preventDefault();
-  const next =
-    event.key === "Home"
-      ? 0
-      : event.key === "End"
-        ? 2
-        : (index + delta + 3) % 3;
+  const next = event.key === "Home" ? 0 : event.key === "End" ? 2 : (index + delta + 3) % 3;
   activeTab.value = detailTabs[next]!.id;
   const buttons = (
     event.currentTarget as HTMLElement
@@ -232,14 +220,8 @@ const reportEvents = computed<ReportEvent[]>(() => {
           added: event.added,
           side: squad.side,
           player: player.name,
-          incoming:
-            event.kind === "out"
-              ? substitution(squad.side).incoming
-              : undefined,
-          description:
-            event.kind === "out" && squad.side === 0
-              ? "Cambio por lesión"
-              : undefined,
+          incoming: event.kind === "out" ? substitution(squad.side).incoming : undefined,
+          description: event.kind === "out" && squad.side === 0 ? "Cambio por lesión" : undefined,
         });
       }
     }
@@ -257,12 +239,8 @@ const reportEvents = computed<ReportEvent[]>(() => {
         added: goal.added_minute,
         side: squad.side,
         player: goal.player_name,
-        assistPlayer:
-          goal.goal_type === "own_goal" ? undefined : goal.assist_player_name,
-        description:
-          goal.goal_type === "own_goal"
-            ? "Gol a favor por autogol rival"
-            : undefined,
+        assistPlayer: goal.goal_type === "own_goal" ? undefined : goal.assist_player_name,
+        description: goal.goal_type === "own_goal" ? "Gol a favor por autogol rival" : undefined,
       }),
     );
   }
@@ -352,22 +330,20 @@ const reportEvents = computed<ReportEvent[]>(() => {
     }
   if (props.match.shootout) {
     const penalties = [0, 0];
-    props.match.shootout.kicks.forEach(
-      ({ side, player, outcome, sequence }) => {
-        if (outcome === "scored") penalties[side] = penalties[side]! + 1;
-        items.push({
-          id: `kick-${sequence}`,
-          kind: "shootout",
-          label: outcome === "scored" ? "Penal convertido" : "Penal fallado",
-          minute: 120,
-          side,
-          player,
-          sequence,
-          outcome,
-          score: penalties.join(" – "),
-        });
-      },
-    );
+    props.match.shootout.kicks.forEach(({ side, player, outcome, sequence }) => {
+      if (outcome === "scored") penalties[side] = penalties[side]! + 1;
+      items.push({
+        id: `kick-${sequence}`,
+        kind: "shootout",
+        label: outcome === "scored" ? "Penal convertido" : "Penal fallado",
+        minute: 120,
+        side,
+        player,
+        sequence,
+        outcome,
+        score: penalties.join(" – "),
+      });
+    });
   }
   return items;
 });
@@ -378,9 +354,7 @@ const reportEvents = computed<ReportEvent[]>(() => {
     <div class="detail-section-heading">
       <h3 id="field-title">Así se paran en la cancha</h3>
       <span>{{
-        match.status === "scheduled"
-          ? "Alineaciones probables · Demo"
-          : "Once inicial · Demo"
+        match.status === "scheduled" ? "Alineaciones probables · Demo" : "Once inicial · Demo"
       }}</span>
     </div>
     <div class="field-legend">
@@ -405,12 +379,7 @@ const reportEvents = computed<ReportEvent[]>(() => {
       aria-label="Cancha con las alineaciones. En móvil puedes desplazarla horizontalmente."
     >
       <div class="football-field">
-        <svg
-          class="grass-texture"
-          width="100%"
-          height="100%"
-          aria-hidden="true"
-        >
+        <svg class="grass-texture" width="100%" height="100%" aria-hidden="true">
           <defs>
             <pattern
               id="pitch-mowing"
@@ -420,24 +389,10 @@ const reportEvents = computed<ReportEvent[]>(() => {
               viewBox="0 0 200 200"
               preserveAspectRatio="none"
             >
-              <path
-                d="M0 0h100v100H0zM100 100h100v100H100z"
-                fill="#1d482b"
-                opacity=".12"
-              />
-              <path
-                d="M100 0h100v100H100zM0 100h100v100H0z"
-                fill="#9bb487"
-                opacity=".08"
-              />
+              <path d="M0 0h100v100H0zM100 100h100v100H100z" fill="#1d482b" opacity=".12" />
+              <path d="M100 0h100v100H100zM0 100h100v100H0z" fill="#9bb487" opacity=".08" />
             </pattern>
-            <filter
-              id="pitch-grass-grain"
-              x="0"
-              y="0"
-              width="100%"
-              height="100%"
-            >
+            <filter id="pitch-grass-grain" x="0" y="0" width="100%" height="100%">
               <feTurbulence
                 type="fractalNoise"
                 baseFrequency=".85"
@@ -454,12 +409,7 @@ const reportEvents = computed<ReportEvent[]>(() => {
             </filter>
           </defs>
           <rect width="100%" height="100%" fill="url(#pitch-mowing)" />
-          <rect
-            width="100%"
-            height="100%"
-            filter="url(#pitch-grass-grain)"
-            opacity=".12"
-          />
+          <rect width="100%" height="100%" filter="url(#pitch-grass-grain)" opacity=".12" />
         </svg>
         <svg
           class="field-lines"
@@ -494,16 +444,12 @@ const reportEvents = computed<ReportEvent[]>(() => {
           >
             <span class="shirt"
               >{{ player.number
-              }}<small
-                v-if="player.captain"
-                class="captain"
-                aria-label="Capitán"
-                >C</small
+              }}<small v-if="player.captain" class="captain" aria-label="Capitán">C</small
               ><span class="pitch-player-events"
                 ><PlayerEvents
                   :events="
-                    eventsFor(squad.team, player.name, squad.side).filter(
-                      (event) => ['goal', 'yellow', 'red'].includes(event.kind),
+                    eventsFor(squad.team, player.name, squad.side).filter((event) =>
+                      ['goal', 'yellow', 'red'].includes(event.kind),
                     )
                   " /></span></span
             ><span class="player-name">{{ player.name }}</span>
@@ -542,17 +488,11 @@ const reportEvents = computed<ReportEvent[]>(() => {
       <div class="detail-section-heading">
         <h3 id="lineups-title">Alineaciones</h3>
         <span>{{
-          match.status === "scheduled"
-            ? "Propuesta visual, no confirmada"
-            : "Titulares y suplentes"
+          match.status === "scheduled" ? "Propuesta visual, no confirmada" : "Titulares y suplentes"
         }}</span>
       </div>
       <div class="squad-grid">
-        <section
-          v-for="squad in squads"
-          :key="squad.team.id"
-          class="squad-panel"
-        >
+        <section v-for="squad in squads" :key="squad.team.id" class="squad-panel">
           <header>
             <h4>{{ squad.team.name }}</h4>
             <span
@@ -585,9 +525,7 @@ const reportEvents = computed<ReportEvent[]>(() => {
               <span class="lineup-number">{{ player.number }}</span
               ><span class="lineup-player"
                 >{{ player.name
-                }}<PlayerEvents
-                  :events="eventsFor(squad.team, player.name, squad.side)"
-                  detailed
+                }}<PlayerEvents :events="eventsFor(squad.team, player.name, squad.side)" detailed
               /></span>
             </li>
           </ul>
@@ -647,13 +585,9 @@ const reportEvents = computed<ReportEvent[]>(() => {
 </template>
 
 <style scoped>
-
 button:hover {
   color: var(--accent);
 }
-
-
-
 
 .detail-section-heading {
   display: flex;
@@ -1000,11 +934,7 @@ button:hover {
 
 .football-field {
   background-color: #51863b;
-  background-image: radial-gradient(
-    ellipse at 45% 35%,
-    #a5ce7026,
-    transparent 75%
-  );
+  background-image: radial-gradient(ellipse at 45% 35%, #a5ce7026, transparent 75%);
 }
 
 .detail-tabs {
@@ -1040,9 +970,22 @@ button:hover {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  button, a, input { transition: color .18s ease, background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
-  button:not(:disabled):active, .primary-action:active { transform: translateY(1px); }
-  input:focus-visible { box-shadow: 0 0 0 3px var(--ui-success-soft, rgba(189, 237, 117, .12)); }
+  button,
+  a,
+  input {
+    transition:
+      color 0.18s ease,
+      background-color 0.18s ease,
+      border-color 0.18s ease,
+      box-shadow 0.18s ease,
+      transform 0.18s ease;
+  }
+  button:not(:disabled):active,
+  .primary-action:active {
+    transform: translateY(1px);
+  }
+  input:focus-visible {
+    box-shadow: 0 0 0 3px var(--ui-success-soft, rgba(189, 237, 117, 0.12));
+  }
 }
 </style>
-

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import TeamBadge from "~/modules/teams/components/TeamBadge.vue"
+import TeamBadge from "~/modules/teams/components/TeamBadge.vue";
 
 import { time, matchState, type Match } from "~/modules/matches/utils/matches";
 defineProps<{ matches: Match[] }>();
@@ -20,22 +20,17 @@ defineProps<{ matches: Match[] }>();
           })
         }}</small></span
       ><span class="fixture-side"
-        ><TeamBadge :name="match.home_team.name" />{{
-          match.home_team.name
-        }}</span
+        ><TeamBadge :name="match.home_team.name" />{{ match.home_team.name }}</span
       ><strong class="fixture-result"
         >{{
           match.status === "scheduled"
             ? time(match.scheduled_at)
             : `${match.home_team.score} – ${match.away_team.score}`
         }}<small v-if="match.home_team.penalty_score != null"
-          >Pen. {{ match.home_team.penalty_score }}–{{
-            match.away_team.penalty_score
-          }}</small
+          >Pen. {{ match.home_team.penalty_score }}–{{ match.away_team.penalty_score }}</small
         ></strong
       ><span class="fixture-side away"
-        >{{ match.away_team.name
-        }}<TeamBadge :name="match.away_team.name" /></span
+        >{{ match.away_team.name }}<TeamBadge :name="match.away_team.name" /></span
       ><span aria-hidden="true">↗</span></NuxtLink
     >
     <p v-if="!matches.length" class="section-empty">
@@ -45,7 +40,6 @@ defineProps<{ matches: Match[] }>();
 </template>
 
 <style scoped>
-
 html[data-theme="light"] .section-empty {
   color: var(--muted) !important;
 }
@@ -57,9 +51,6 @@ html[data-theme="light"] .section-empty {
   color: var(--ui-muted, #96a38e);
   font-size: 12px;
 }
-
-
-
 
 .fixture-list {
   display: grid;
@@ -142,15 +133,36 @@ html[data-theme="light"] .section-empty {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  button, a, input { transition: color .18s ease, background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
-  button:not(:disabled):active, .primary-action:active { transform: translateY(1px); }
-  input:focus-visible { box-shadow: 0 0 0 3px var(--ui-success-soft, rgba(189, 237, 117, .12)); }
+  button,
+  a,
+  input {
+    transition:
+      color 0.18s ease,
+      background-color 0.18s ease,
+      border-color 0.18s ease,
+      box-shadow 0.18s ease,
+      transform 0.18s ease;
+  }
+  button:not(:disabled):active,
+  .primary-action:active {
+    transform: translateY(1px);
+  }
+  input:focus-visible {
+    box-shadow: 0 0 0 3px var(--ui-success-soft, rgba(189, 237, 117, 0.12));
+  }
 }
 @media (prefers-reduced-motion: no-preference) {
-.fixture-row { transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+  .fixture-row {
+    transition:
+      transform 0.2s ease,
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
 }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
-.fixture-row:hover { transform: translateY(-2px); box-shadow: 0 6px 18px var(--shadow); }
+  .fixture-row:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px var(--shadow);
+  }
 }
 </style>
-

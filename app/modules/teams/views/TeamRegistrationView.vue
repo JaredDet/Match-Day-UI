@@ -5,7 +5,8 @@ import PageHeading from "~/components/PageHeading.vue";
 import { positionNames } from "~/modules/teams/data/teamProfiles";
 import { useTeamRegistration } from "~/modules/teams/composables/useTeamRegistration";
 
-const { name, coach, players, error, validate, submit } = useTeamRegistration();
+const { name, coach, crest, city, stadium, foundedYear, players, error, validate, submit } =
+  useTeamRegistration();
 const step = ref(0);
 const submitted = ref(false);
 useUnsavedChanges(
@@ -14,22 +15,52 @@ useUnsavedChanges(
       !submitted.value &&
       (!!name.value.trim() ||
         !!coach.value.trim() ||
+        !!city.value.trim() ||
+        !!stadium.value.trim() ||
+        foundedYear.value !== null ||
+        crest.value !== null ||
         players.value.some((player) => !!player.name.trim())),
   ),
 );
-function proceed() {
+async function proceed() {
   if (step.value < 2) {
     if (validate(step.value)) step.value++;
     return;
   }
   if (validate()) {
-    submitted.value = true;
-    submit();
+    try {
+      await submit();
+      submitted.value = true;
+      await navigateTo("/teams/register/success");
+    } catch {
+      submitted.value = false;
+    }
   }
 }
 function back() {
   error.value = "";
   step.value--;
+}
+function uploadCrest(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0];
+  if (!file) {
+    crest.value = null;
+    return;
+  }
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5_000_000) {
+    error.value = "Elige un escudo JPG, PNG o WebP de hasta 5 MB.";
+    (event.target as HTMLInputElement).value = "";
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    crest.value = String(reader.result);
+    error.value = "";
+  };
+  reader.onerror = () => {
+    error.value = "No se pudo leer el escudo.";
+  };
+  reader.readAsDataURL(file);
 }
 useHead({ title: "Crear equipo · Matchday" });
 </script>
@@ -38,23 +69,14 @@ useHead({ title: "Crear equipo · Matchday" });
     <PageHeading
       title="Crear equipo"
       kicker="EQUIPOS"
-      description="Prepara los datos del club y su plantilla en esta demostración."
+      description="Prepara los datos del club y registra su plantilla."
       back-to="/teams"
       back-label="Todos los equipos"
-    /><RegistrationSteps
-      :labels="['Equipo', 'Plantilla', 'Confirmar']"
-      :current="step"
-    />
+    /><RegistrationSteps :labels="['Equipo', 'Plantilla', 'Confirmar']" :current="step" />
     <Transition name="registration-step" mode="out-in"
       ><form :key="step" class="demo-form" @submit.prevent="proceed">
         <h2 tabindex="-1" aria-live="polite">
-          {{
-            [
-              "Datos del equipo",
-              "Jugadores de la plantilla",
-              "Revisa el registro",
-            ][step]
-          }}
+          {{ ["Datos del equipo", "Jugadores de la plantilla", "Revisa el registro"][step] }}
         </h2>
         <template v-if="step === 0"
           ><label
@@ -69,23 +91,31 @@ useHead({ title: "Crear equipo · Matchday" });
               required
               maxlength="200"
               autocomplete="name" /></label
-        ></template>
+          ><label
+            >Ciudad<input v-model="city" maxlength="100" autocomplete="address-level2" /></label
+          ><label>Estadio<input v-model="stadium" maxlength="200" autocomplete="off" /></label
+          ><label
+            >Año de fundación<input
+              v-model.number="foundedYear"
+              type="number"
+              min="1800"
+              max="9999" /></label
+          ><label
+            >Escudo<input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              @change="uploadCrest" /></label
+          ><TeamBadge v-if="crest" class="crest-preview" :name="name || 'Equipo'" :src="crest" />
+          ></template
+        >
         <template v-else-if="step === 1"
           ><fieldset v-for="(player, index) in players" :key="index">
             <legend>Jugador {{ index + 1 }}</legend>
-            <label
-              >Nombre<input
-                v-model="player.name"
-                required
-                maxlength="200" /></label
+            <label>Nombre<input v-model="player.name" required maxlength="200" /></label
             ><label
               >Posición preferida<AppSelect v-model="player.preferred_position"
                 ><option value="">Sin definir</option>
-                <option
-                  v-for="(label, key) in positionNames"
-                  :key="key"
-                  :value="key"
-                >
+                <option v-for="(label, key) in positionNames" :key="key" :value="key">
                   {{ label }}
                 </option></AppSelect
               ></label
@@ -102,11 +132,7 @@ useHead({ title: "Crear equipo · Matchday" });
                       ? null
                       : Number(($event.target as HTMLInputElement).value)
                 " /></label
-            ><button
-              type="button"
-              class="text-action"
-              @click="players.splice(index, 1)"
-            >
+            ><button type="button" class="text-action" @click="players.splice(index, 1)">
               Quitar jugador
             </button>
           </fieldset>
@@ -127,36 +153,31 @@ useHead({ title: "Crear equipo · Matchday" });
         <section v-else class="registration-review">
           <h3>{{ name }}</h3>
           <p>Director técnico: {{ coach || "Sin asignar" }}</p>
+          <p v-if="city">Ciudad: {{ city }}</p>
+          <p v-if="stadium">Estadio: {{ stadium }}</p>
+          <p v-if="foundedYear">Fundado en {{ foundedYear }}</p>
           <p>{{ players.length }} jugadores</p>
           <ul>
             <li v-for="(player, index) in players" :key="index">
               {{ player.name }} ·
               {{
                 player.preferred_position
-                  ? positionNames[
-                      player.preferred_position as keyof typeof positionNames
-                    ]
+                  ? positionNames[player.preferred_position as keyof typeof positionNames]
                   : "Sin posición"
               }}
               · Dorsal {{ player.preferred_shirt_number ?? "sin asignar" }}
             </li>
           </ul>
           <p>
-            El registro es una simulación y no inscribe al equipo en una
-            temporada.
+            El registro crea el equipo y su plantilla. La inscripción en una temporada se realiza
+            por separado.
           </p>
         </section>
         <p v-if="error" class="form-error" role="alert">{{ error }}</p>
         <div class="step-actions">
-          <button
-            v-if="step > 0"
-            type="button"
-            class="text-action"
-            @click="back"
-          >
-            Atrás</button
+          <button v-if="step > 0" type="button" class="text-action" @click="back">Atrás</button
           ><button type="submit" class="primary-action">
-            {{ step === 2 ? "Confirmar registro demo" : "Continuar" }}
+            {{ step === 2 ? "Confirmar registro" : "Continuar" }}
           </button>
         </div>
       </form></Transition

@@ -36,6 +36,10 @@ export interface TeamRecentMatch {
 export interface TeamSummary {
   id: string;
   name: string;
+  crest: string | null;
+  city: string | null;
+  stadium_name: string | null;
+  founded_year: number | null;
   last_match: Omit<TeamRecentMatch, "scheduled_at"> | null;
   next_match: {
     match_id: string;
@@ -47,6 +51,10 @@ export interface TeamDetail {
   id: string;
   name: string;
   head_coach_name: string | null;
+  crest: string | null;
+  city: string | null;
+  stadium_name: string | null;
+  founded_year: number | null;
   statistics: {
     matches_played: number;
     wins: number;
@@ -75,4 +83,9 @@ export interface PlayerDetail extends TeamPlayer {
     yellow_cards: number;
     red_cards: number;
   }[];
+}
+export interface PlayerSummary extends TeamPlayer {
+  team: { id: string; name: string };
+  appearances: number;
+  goals: number;
 }

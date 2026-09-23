@@ -1,14 +1,77 @@
-<script setup lang="ts">
-import { useTeamProfiles } from "~/modules/teams/composables/useTeamProfiles"
+﻿<script setup lang="ts">
+import { useRepositories } from "~/core/api/repository-context";
 
-import { positionNames,resultNames } from '~/modules/teams/data/teamProfiles'
-const route=useRoute(),profiles=useTeamProfiles()
-const player=computed(()=>profiles.value.players.find(p=>p.id===route.params.id))
-if(!player.value)throw createError({statusCode:404,statusMessage:'Jugador no encontrado'})
-const metrics=computed(()=>player.value?[['Participaciones',player.value.statistics.appearances],['Goles',player.value.statistics.goals],['Amarillas',player.value.statistics.yellow_cards],['Rojas',player.value.statistics.red_cards]]:[])
-useHead(()=>({title:`${player.value?.name ?? 'Jugador'} · Matchday`}))
+import { positionNames, resultNames } from "~/modules/teams/data/teamProfiles";
+const route = useRoute(),
+  repository = useRepositories().teams;
+const { data: player } = await useAsyncData(`player-detail-${route.params.id}`, () =>
+  repository.getPlayer(String(route.params.id), true),
+);
+if (!player.value) throw createError({ statusCode: 404, statusMessage: "Jugador no encontrado" });
+const metrics = computed(() =>
+  player.value
+    ? [
+        ["Participaciones", player.value.statistics.appearances],
+        ["Goles", player.value.statistics.goals],
+        ["Amarillas", player.value.statistics.yellow_cards],
+        ["Rojas", player.value.statistics.red_cards],
+      ]
+    : [],
+);
+useHead(() => ({ title: `${player.value?.name ?? "Jugador"} · Matchday` }));
 </script>
-<template><main v-if="player" class="competition-page"><NuxtLink :to="`/teams/${player.team.id}`" class="section-back">← {{ player.team.name }}</NuxtLink><div class="entity-heading"><span class="player-number">{{ player.preferred_shirt_number ?? '–' }}</span><div><span class="section-kicker">{{ player.preferred_position ? positionNames[player.preferred_position] : 'Posición sin definir' }}</span><h1>{{ player.name }}<span>.</span></h1><NuxtLink :to="`/teams/${player.team.id}`">{{ player.team.name }}</NuxtLink><span v-if="player.is_captain" class="captain-tag">Capitán</span></div></div><p class="demo-caption">Datos de demostración · Dorsal y posición preferidos</p><dl class="profile-stats"><div v-for="metric in metrics" :key="String(metric[0])"><dt>{{ metric[0] }}</dt><dd>{{ metric[1] }}</dd></div></dl><h2 class="profile-section-title">Participaciones recientes</h2><div class="profile-results"><article v-for="match in player.recent_matches" :key="match.match_id" class="player-match"><NuxtLink :to="`/matches/${match.match_id}`" class="text-action">{{ new Date(match.scheduled_at).toLocaleDateString('es-CL',{timeZone:'America/Santiago',day:'numeric',month:'long'}) }} · Ver partido ↗</NuxtLink><div><NuxtLink :to="`/teams/${match.opponent.id}`">vs. {{ match.opponent.name }}</NuxtLink><span :class="['result-pill',match.result]">{{ resultNames[match.result] }}</span></div><p>{{ match.goals }} goles · {{ match.yellow_cards }} amarillas · {{ match.red_cards }} rojas</p></article><p v-if="!player.recent_matches.length" class="section-empty">Todavía no hay participaciones recientes.</p></div></main></template>
+<template>
+  <main v-if="player" class="competition-page">
+    <NuxtLink :to="`/teams/${player.team.id}`" class="section-back"
+      >← {{ player.team.name }}</NuxtLink
+    >
+    <div class="entity-heading">
+      <span class="player-number">{{ player.preferred_shirt_number ?? "–" }}</span>
+      <div>
+        <span class="section-kicker">{{
+          player.preferred_position
+            ? positionNames[player.preferred_position]
+            : "Posición sin definir"
+        }}</span>
+        <h1>{{ player.name }}<span>.</span></h1>
+        <NuxtLink :to="`/teams/${player.team.id}`">{{ player.team.name }}</NuxtLink
+        ><span v-if="player.is_captain" class="captain-tag">Capitán</span>
+      </div>
+    </div>
+    <p class="demo-caption">Dorsal y posición preferidos</p>
+    <dl class="profile-stats">
+      <div v-for="metric in metrics" :key="String(metric[0])">
+        <dt>{{ metric[0] }}</dt>
+        <dd>{{ metric[1] }}</dd>
+      </div>
+    </dl>
+    <h2 class="profile-section-title">Participaciones recientes</h2>
+    <div class="profile-results">
+      <article v-for="match in player.recent_matches" :key="match.match_id" class="player-match">
+        <NuxtLink :to="`/matches/${match.match_id}`" class="text-action"
+          >{{
+            new Date(match.scheduled_at).toLocaleDateString("es-CL", {
+              timeZone: "America/Santiago",
+              day: "numeric",
+              month: "long",
+            })
+          }}
+          · Ver partido ↗</NuxtLink
+        >
+        <div>
+          <NuxtLink :to="`/teams/${match.opponent.id}`">vs. {{ match.opponent.name }}</NuxtLink
+          ><span :class="['result-pill', match.result]">{{ resultNames[match.result] }}</span>
+        </div>
+        <p>
+          {{ match.goals }} goles · {{ match.yellow_cards }} amarillas · {{ match.red_cards }} rojas
+        </p>
+      </article>
+      <p v-if="!player.recent_matches.length" class="section-empty">
+        Todavía no hay participaciones recientes.
+      </p>
+    </div>
+  </main>
+</template>
 
 <style scoped>
 html[data-theme="light"] main,
@@ -265,22 +328,58 @@ h2 {
   }
 }
 
-.result-pill.win { background: var(--ui-surface, #2f4425); color: var(--ui-success, #bde897); }
-.result-pill.loss { background: var(--ui-surface, #442c29); color: var(--ui-danger, #edb5ad); }
-html[data-theme="light"] .result-pill.win { background: #dff1c4; color: #224c1b; }
-html[data-theme="light"] .result-pill.loss { background: #f8d8d0; color: #7b3127; }
-html[data-theme="light"] .result-pill.draw { background: #ebebeb; color: #3b3b3b; }
+.result-pill.win {
+  background: var(--ui-surface, #2f4425);
+  color: var(--ui-success, #bde897);
+}
+.result-pill.loss {
+  background: var(--ui-surface, #442c29);
+  color: var(--ui-danger, #edb5ad);
+}
+html[data-theme="light"] .result-pill.win {
+  background: #dff1c4;
+  color: #224c1b;
+}
+html[data-theme="light"] .result-pill.loss {
+  background: #f8d8d0;
+  color: #7b3127;
+}
+html[data-theme="light"] .result-pill.draw {
+  background: #ebebeb;
+  color: #3b3b3b;
+}
 
 @media (prefers-reduced-motion: no-preference) {
-  button, a, input { transition: color .18s ease, background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
-  button:not(:disabled):active, .primary-action:active { transform: translateY(1px); }
-  input:focus-visible { box-shadow: 0 0 0 3px var(--ui-success-soft, rgba(189, 237, 117, .12)); }
+  button,
+  a,
+  input {
+    transition:
+      color 0.18s ease,
+      background-color 0.18s ease,
+      border-color 0.18s ease,
+      box-shadow 0.18s ease,
+      transform 0.18s ease;
+  }
+  button:not(:disabled):active,
+  .primary-action:active {
+    transform: translateY(1px);
+  }
+  input:focus-visible {
+    box-shadow: 0 0 0 3px var(--ui-success-soft, rgba(189, 237, 117, 0.12));
+  }
 }
 @media (prefers-reduced-motion: no-preference) {
-.player-match { transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+  .player-match {
+    transition:
+      transform 0.2s ease,
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
 }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
-.player-match:hover { transform: translateY(-2px); box-shadow: 0 6px 18px var(--shadow); }
+  .player-match:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px var(--shadow);
+  }
 }
 </style>
-

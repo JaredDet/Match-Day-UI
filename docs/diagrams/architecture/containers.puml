@@ -1,0 +1,19 @@
+@startuml MatchdayUIContainers
+!include <C4/C4_Container>
+title Matchday - Contenedores
+Person(user, "Usuario", "Visitante u operador")
+System_Boundary(matchday, "Matchday") {
+  Container(ui, "Matchday UI", "Nuxt, Vue, TypeScript", "Presenta pantallas, valida formularios y registra navegación")
+  Container(api, "Matchday API", "Django REST Framework", "Expone consultas y comandos del dominio")
+  Container(worker, "Procesos independientes", "Django commands", "Publica noticias, sincroniza partidos y genera recomendaciones")
+  ContainerDb(database, "Base de datos", "PostgreSQL / SQLite", "Contenido, competición y actividad anónima")
+  Container(redis, "Canal en tiempo real", "Redis", "Actualizaciones del reloj de partido")
+}
+Rel(user, ui, "Usa", "HTTPS")
+Rel(ui, api, "Consulta y envía comandos", "JSON / multipart + cookies")
+Rel(api, database, "Lee y escribe", "Django ORM")
+Rel(worker, database, "Procesa lotes", "Django ORM")
+Rel(worker, redis, "Publica estados")
+Rel(api, redis, "Entrega actualizaciones", "WebSocket")
+SHOW_LEGEND()
+@enduml

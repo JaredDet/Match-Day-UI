@@ -1,20 +1,18 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import AppSelect from "~/components/AppSelect.vue";
 import TeamBadge from "~/modules/teams/components/TeamBadge.vue";
 import PageHeading from "~/components/PageHeading.vue";
 import EmptyState from "~/components/EmptyState.vue";
-import { useDemoRegistrations } from "~/modules/tournaments/composables/useDemoRegistrations";
 
 import TournamentBracket from "~/modules/tournaments/components/TournamentBracket.vue";
 
-import { phases } from "~/modules/tournaments/data/tournaments";
 import { useTournamentManagement } from "~/modules/tournaments/composables/useTournamentManagement";
-import { useDemoTeams } from "~/modules/teams/composables/useDemoTeams";
+import { useTeams } from "~/modules/teams/composables/useTeams";
 import SeasonBoard from "~/modules/tournaments/components/SeasonBoard.vue";
 import { groups } from "~/modules/tournaments/data/competition";
 const route = useRoute(),
   manager = useTournamentManagement(),
-  { teamById } = useDemoTeams();
+  { teamById } = useTeams();
 const tournament = computed(() =>
   manager.tournaments.value.find((t) => t.slug === route.params.id),
 );
@@ -24,23 +22,17 @@ const seasons = computed(() =>
   manager.seasons.value.filter((s) => s.tournament === tournament.value!.id),
 );
 const season = ref(
-  seasons.value.find((s) => s.id === route.query.season)?.id ??
-    (tournament.value.id === "demo-cup"
-      ? "season-2026"
-      : (seasons.value[0]?.id ?? "")),
+  seasons.value.find((s) => s.id === route.query.season)?.id ?? seasons.value[0]?.id ?? "",
 );
 const tab = ref("groups");
-const registrations = useDemoRegistrations();
+const registrations = manager.registrations;
 const registeredTeams = computed(() =>
   (registrations.value[season.value] ?? []).map((id) => ({
     ...teamById(id)!,
-    group:
-      season.value === "season-2026"
-        ? groups.find((g) => g.rows.some((row) => row.id === id))?.name
-        : manager.phases.value
-            .filter((p) => p.season === season.value)
-            .flatMap((p) => p.groups)
-            .find((g) => g.teams.includes(id))?.name,
+    group: manager.phases.value
+      .filter((p) => p.season === season.value)
+      .flatMap((p) => p.groups)
+      .find((g) => g.teams.includes(id))?.name,
   })),
 );
 const registeredTeamGroups = computed(() => {
@@ -69,7 +61,7 @@ const tabs = [
 ];
 const currentPhaseId = computed(
   () =>
-    [...phases]
+    [...manager.phases.value]
       .filter((phase) => phase.status !== "finished")
       .sort((left, right) => left.order - right.order)[0]?.id,
 );
@@ -93,17 +85,13 @@ useSeoMeta(() => ({
     <PageHeading
       :title="tournament.name"
       :kicker="`${tournament.country} · ${tournament.category}`"
-      :description="`${registeredTeams.length} equipos · ${season === 'season-2026' ? groups.length : 0} grupos · Máximo ${tournament.max_teams_per_group} por grupo`"
+      :description="`${registeredTeams.length} equipos · ${manager.phases.value.filter((phase) => phase.season === season).flatMap((phase) => phase.groups).length} grupos · Máximo ${tournament.max_teams_per_group} por grupo`"
       back-to="/tournaments"
       back-label="Todos los torneos"
     >
       <label class="season-picker"
         >Temporada<AppSelect v-model="season"
-          ><option
-            v-for="edition in seasons"
-            :key="edition.id"
-            :value="edition.id"
-          >
+          ><option v-for="edition in seasons" :key="edition.id" :value="edition.id">
             {{ edition.name }}
           </option></AppSelect
         ></label
@@ -112,9 +100,7 @@ useSeoMeta(() => ({
         :to="`/tournaments/manage?tournament=${tournament.id}&season=${season}`"
         class="primary-action"
         >Gestionar torneo</NuxtLink
-      ><NuxtLink
-        :to="`/tournaments/register?season=${season}`"
-        class="primary-action"
+      ><NuxtLink :to="`/tournaments/register?season=${season}`" class="primary-action"
         >Inscribir equipos</NuxtLink
       >
       <ShareButton
@@ -135,18 +121,11 @@ useSeoMeta(() => ({
     </nav>
     <Transition name="section-swap" mode="out-in"
       ><section :key="`${tab}-${season}`" class="entity-content">
-        <SeasonBoard
-          v-if="season !== 'season-2026' && tab !== 'teams'"
-          :season-id="season"
-          :tab="tab"
-        />
+        <SeasonBoard v-if="tab !== 'teams'" :season-id="season" :tab="tab" />
         <template v-else-if="tab === 'teams'">
           <div class="content-heading">
             <h2>Equipos inscritos</h2>
-            <span
-              >{{ registeredTeams.length }} participantes en esta
-              temporada</span
-            >
+            <span>{{ registeredTeams.length }} participantes en esta temporada</span>
           </div>
           <EmptyState
             v-if="!registeredTeams.length"
@@ -191,7 +170,7 @@ useSeoMeta(() => ({
           </div>
           <div class="phase-list">
             <article
-              v-for="phase in phases"
+              v-for="phase in manager.phases.value.filter((item) => item.season === season)"
               :key="phase.id"
               class="info-panel"
               :class="{ current: phase.id === currentPhaseId }"
@@ -202,9 +181,7 @@ useSeoMeta(() => ({
               </div>
               <span class="phase-status"
                 ><strong v-if="phase.id === currentPhaseId">Actual</strong
-                >{{
-                  phase.status === "finished" ? "Finalizada" : "Programada"
-                }}</span
+                >{{ phase.status === "finished" ? "Finalizada" : "Programada" }}</span
               >
               <span>{{
                 phase.kind === "groups"
@@ -223,9 +200,7 @@ useSeoMeta(() => ({
           </div>
           <div class="groups-layout">
             <div v-for="group in groups" :key="group.name" class="group-panel">
-              <h3>
-                Grupo {{ group.name }}<span>6 jornadas · Finalizado</span>
-              </h3>
+              <h3>Grupo {{ group.name }}<span>6 jornadas · Finalizado</span></h3>
               <div class="table-scroll">
                 <table>
                   <caption class="sr-only">
@@ -262,11 +237,8 @@ useSeoMeta(() => ({
                       <th scope="row">
                         <NuxtLink :to="`/teams/${row.id}`"
                           ><span class="rank">{{ index + 1 }}</span
-                          ><TeamBadge :name="teamById(row.id)?.name" />{{
-                            teamById(row.id)?.name
-                          }}<span v-if="index < 2" class="sr-only"
-                            >Clasificado</span
-                          ></NuxtLink
+                          ><TeamBadge :name="teamById(row.id)?.name" />{{ teamById(row.id)?.name
+                          }}<span v-if="index < 2" class="sr-only">Clasificado</span></NuxtLink
                         >
                       </th>
                       <td>{{ row.w + row.d + row.l }}</td>
@@ -288,8 +260,8 @@ useSeoMeta(() => ({
           <p class="standings-legend">
             <i /> Clasificado a octavos
             <span
-              >PJ: jugados · G: ganados · E: empatados · P: perdidos · GF/GC:
-              goles · DG: diferencia · PTS: puntos</span
+              >PJ: jugados · G: ganados · E: empatados · P: perdidos · GF/GC: goles · DG: diferencia
+              · PTS: puntos</span
             >
           </p></template
         >
@@ -720,21 +692,14 @@ h2 {
 }
 .phase-list article {
   display: grid;
-  grid-template-columns: minmax(240px, 1.2fr) minmax(120px, 0.45fr) minmax(
-      260px,
-      1fr
-    );
+  grid-template-columns: minmax(240px, 1.2fr) minmax(120px, 0.45fr) minmax(260px, 1fr);
   align-items: center;
   gap: 28px;
   padding: 20px;
 }
 .phase-list article.current {
   border-color: var(--accent);
-  background: linear-gradient(
-    90deg,
-    var(--ui-success-soft),
-    var(--surface) 38%
-  );
+  background: linear-gradient(90deg, var(--ui-success-soft), var(--surface) 38%);
   box-shadow: inset 3px 0 var(--accent);
 }
 .phase-list article > span:nth-child(2) {

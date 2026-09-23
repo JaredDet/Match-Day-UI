@@ -1,9 +1,9 @@
 <script setup lang="ts">
 defineOptions({ inheritAttrs: false });
-const props = withDefaults(
-  defineProps<{ src?: string | null; alt: string; eager?: boolean }>(),
-  { src: null, eager: false },
-);
+const props = withDefaults(defineProps<{ src?: string | null; alt: string; eager?: boolean }>(), {
+  src: null,
+  eager: false,
+});
 const failed = ref(false);
 watch(
   () => props.src,
@@ -24,12 +24,7 @@ watch(
       decoding="async"
       @error="failed = true"
     />
-    <span
-      v-else
-      class="image-fallback"
-      role="img"
-      :aria-label="alt || 'Imagen no disponible'"
-    >
+    <span v-else class="image-fallback" role="img" :aria-label="alt || 'Imagen no disponible'">
       <span aria-hidden="true">m↗</span><small>Imagen no disponible</small>
     </span>
   </span>
@@ -57,11 +52,7 @@ img {
   place-content: center;
   gap: 8px;
   text-align: center;
-  background: linear-gradient(
-    135deg,
-    var(--panel-strong),
-    var(--ui-success-soft)
-  );
+  background: linear-gradient(135deg, var(--panel-strong), var(--ui-success-soft));
   color: var(--muted);
 }
 .image-fallback > span {

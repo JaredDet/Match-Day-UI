@@ -34,12 +34,7 @@ export type Match = {
   current_added_minute: number;
   clock: {
     period: Period | null;
-    status:
-      | "not_started"
-      | "running"
-      | "regulation_time_reached"
-      | "deadline_reached"
-      | "closed";
+    status: "not_started" | "running" | "regulation_time_reached" | "deadline_reached" | "closed";
     minute: number | null;
     second: number;
     added_minute: number;
@@ -57,22 +52,14 @@ const periodNames: Record<Period, string> = {
   extra_time_second_half: "Prórroga · 2.º tiempo",
 };
 export function periodLabel(match: Match) {
-  return match.current_period
-    ? periodNames[match.current_period]
-    : "Por comenzar";
+  return match.current_period ? periodNames[match.current_period] : "Por comenzar";
 }
 export function matchState(match: Match) {
   if (match.status === "scheduled") return "Por jugar";
   if (match.status === "finished") return "Finalizado";
-  if (
-    match.home_team.penalty_score != null &&
-    match.away_team.penalty_score != null
-  )
+  if (match.home_team.penalty_score != null && match.away_team.penalty_score != null)
     return "Tanda de penales";
-  if (
-    match.current_period === "halftime" ||
-    match.current_period === "extra_time_halftime"
-  )
+  if (match.current_period === "halftime" || match.current_period === "extra_time_halftime")
     return periodLabel(match);
   return `${match.current_minute ?? "—"}${match.current_added_minute ? "+" + match.current_added_minute : ""}′ · ${periodLabel(match)}`;
 }

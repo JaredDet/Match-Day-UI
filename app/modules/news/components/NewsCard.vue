@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { newsDate } from "~/modules/news/data/news";
-import { useDemoTeams } from "~/modules/teams/composables/useDemoTeams";
-import type { NewsPreview } from "~/modules/news/composables/useDemoNews";
+import { useTeams } from "~/modules/teams/composables/useTeams";
+import type { NewsListItem } from "~/modules/news/domain/news-repository";
 
-const { teamById } = useDemoTeams();
-defineProps<{ item: NewsPreview }>();
+const { teamById } = useTeams();
+defineProps<{ item: NewsListItem }>();
 </script>
 
 <template>

@@ -1,4 +1,4 @@
-import { teams, squad } from "~/modules/teams/data/teams";;
+import { teams, squad } from "~/modules/teams/data/teams";
 import type { Match } from "~/modules/matches/utils/matches";
 import type {
   TeamDetail,
@@ -30,14 +30,14 @@ export const resultNames: Record<Result, string> = {
   draw: "Empate",
   loss: "Derrota",
 };
-export function createTeamProfiles(matches: Match[], catalog = teams, rosters: Record<string, import("~/modules/teams/types/teams").TeamPlayer[]> = {}) {
+export function createTeamProfiles(
+  matches: Match[],
+  catalog = teams,
+  rosters: Record<string, import("~/modules/teams/types/teams").TeamPlayer[]> = {},
+) {
   const details: TeamDetail[] = catalog.map((team) => {
     const finished = matches
-      .filter(
-        (m) =>
-          m.status === "finished" &&
-          [m.home_team.id, m.away_team.id].includes(team.id),
-      )
+      .filter((m) => m.status === "finished" && [m.home_team.id, m.away_team.id].includes(team.id))
       .sort((a, b) => b.scheduled_at.localeCompare(a.scheduled_at));
     const recent_matches = finished.map((m) => {
       const own = m.home_team.id === team.id ? m.home_team : m.away_team;
@@ -88,6 +88,10 @@ export function createTeamProfiles(matches: Match[], catalog = teams, rosters: R
       id: team.id,
       name: team.name,
       head_coach_name: team.id === "7" ? null : team.coach,
+      crest: null,
+      city: team.city,
+      stadium_name: team.stadium,
+      founded_year: team.founded,
       statistics: {
         matches_played: finished.length,
         wins: recent_matches.filter((m) => m.result === "win").length,
@@ -96,16 +100,16 @@ export function createTeamProfiles(matches: Match[], catalog = teams, rosters: R
         goals_for: recent_matches.reduce((n, m) => n + m.goals_for, 0),
         goals_against: recent_matches.reduce((n, m) => n + m.goals_against, 0),
       },
-      players: rosters[team.id] ?? (
-        team.id === "7"
+      players:
+        rosters[team.id] ??
+        (team.id === "7"
           ? []
           : squad
               .flatMap((section) => section.players)
               .map((player, index) => ({
                 id: `${team.id}-${index}`,
                 name: player.split("|")[1]!,
-                preferred_shirt_number:
-                  index === 14 ? null : Number(player.split("|")[0]),
+                preferred_shirt_number: index === 14 ? null : Number(player.split("|")[0]),
                 preferred_position: index === 14 ? null : positions[index]!,
                 is_captain: index === 3,
               }))),
@@ -114,24 +118,23 @@ export function createTeamProfiles(matches: Match[], catalog = teams, rosters: R
   });
   const summaries: TeamSummary[] = details.map((team) => {
     const next = matches
-      .filter(
-        (m) =>
-          m.status === "scheduled" &&
-          [m.home_team.id, m.away_team.id].includes(team.id),
-      )
+      .filter((m) => m.status === "scheduled" && [m.home_team.id, m.away_team.id].includes(team.id))
       .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at))[0];
     const last = team.recent_matches[0];
     return {
       id: team.id,
       name: team.name,
+      crest: team.crest,
+      city: team.city,
+      stadium_name: team.stadium_name,
+      founded_year: team.founded_year,
       last_match: last
         ? {
             match_id: last.match_id,
             opponent_name: last.opponent_name,
             goals_for: last.goals_for,
             goals_against: last.goals_against,
-            ...(last.penalty_score_for != null &&
-            last.penalty_score_against != null
+            ...(last.penalty_score_for != null && last.penalty_score_against != null
               ? {
                   penalty_score_for: last.penalty_score_for,
                   penalty_score_against: last.penalty_score_against,
@@ -144,9 +147,7 @@ export function createTeamProfiles(matches: Match[], catalog = teams, rosters: R
         ? {
             match_id: next.id,
             opponent_name:
-              next.home_team.id === team.id
-                ? next.away_team.name
-                : next.home_team.name,
+              next.home_team.id === team.id ? next.away_team.name : next.home_team.name,
             scheduled_at: next.scheduled_at,
           }
         : null,
@@ -156,10 +157,8 @@ export function createTeamProfiles(matches: Match[], catalog = teams, rosters: R
     team.players.map((player) => {
       const recent_matches = team.recent_matches.map((recent) => {
         const match = matches.find((m) => m.id === recent.match_id)!;
-        const own =
-          match.home_team.id === team.id ? match.home_team : match.away_team;
-        const opponent =
-          match.home_team.id === team.id ? match.away_team : match.home_team;
+        const own = match.home_team.id === team.id ? match.home_team : match.away_team;
+        const opponent = match.home_team.id === team.id ? match.away_team : match.home_team;
         return {
           match_id: recent.match_id,
           scheduled_at: recent.scheduled_at,

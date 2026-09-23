@@ -1,16 +1,16 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import PageHeading from "~/components/PageHeading.vue";
 import ManagementPanel from "~/components/ManagementPanel.vue";
 import AppSelect from "~/components/AppSelect.vue";
 import NewsParagraph from "~/modules/news/components/NewsParagraph.vue";
-import { useDemoNews } from "~/modules/news/composables/useDemoNews";
+import { useNewsManagement } from "~/modules/news/composables/useNewsManagement";
 import { newsDate } from "~/modules/news/data/news";
 import { newsPreview } from "~/modules/news/utils/preview";
-import { useDemoTeams } from "~/modules/teams/composables/useDemoTeams";
+import { useTeams } from "~/modules/teams/composables/useTeams";
 
 const MAX_CONTENT_LENGTH = 500;
-const { items, save, act, publishDue } = useDemoNews();
-const { teams } = useDemoTeams();
+const { items, get, save, act } = useNewsManagement();
+const { teams } = useTeams();
 const selected = ref(""),
   title = ref(""),
   team = ref(""),
@@ -27,34 +27,19 @@ const contentLength = ref(0),
   italicActive = ref(false);
 let editorSelection: Range | null = null;
 const visible = computed(() =>
-  items.value.filter(
-    (item) => filter.value === "all" || item.status === filter.value,
-  ),
+  items.value.filter((item) => filter.value === "all" || item.status === filter.value),
 );
 const previewParagraph = computed(
-  () =>
-    content.value
-      .split(/\n\s*\n/)
-      .find((paragraph) => newsPreview([paragraph])) ?? "",
+  () => content.value.split(/\n\s*\n/).find((paragraph) => newsPreview([paragraph])) ?? "",
 );
-const contentAtLimit = computed(
-  () => contentLength.value >= MAX_CONTENT_LENGTH,
-);
+const contentAtLimit = computed(() => contentLength.value >= MAX_CONTENT_LENGTH);
 const savedSnapshot = ref("");
 const formSnapshot = computed(() =>
-  JSON.stringify([
-    selected.value,
-    title.value,
-    team.value,
-    content.value,
-    cover.value,
-  ]),
+  JSON.stringify([selected.value, title.value, team.value, content.value, cover.value]),
 );
 useUnsavedChanges(
   computed(() =>
-    !!title.value || !!content.value
-      ? formSnapshot.value !== savedSnapshot.value
-      : false,
+    !!title.value || !!content.value ? formSnapshot.value !== savedSnapshot.value : false,
   ),
 );
 const labels = {
@@ -63,11 +48,11 @@ const labels = {
   PUBLISHED: "Publicada",
 };
 
-function run(action: () => void, success: string) {
+async function run(action: () => Promise<unknown>, success: string) {
   error.value = "";
   message.value = "";
   try {
-    action();
+    await action();
     message.value = success;
   } catch (exception) {
     error.value = (exception as Error).message;
@@ -96,10 +81,7 @@ function serializeEditor() {
     .replace(/<i><b>([\s\S]*?)<\/b><\/i>/g, "<b><i>$1</i></b>")
     .replace(/\n{3,}/g, "\n\n")
     .replace(/\n+$/, "");
-  contentLength.value = (editor.innerText || editor.textContent || "").replace(
-    /\n+$/,
-    "",
-  ).length;
+  contentLength.value = (editor.innerText || editor.textContent || "").replace(/\n+$/, "").length;
   if (contentLength.value < MAX_CONTENT_LENGTH) limitAttempted.value = false;
 }
 function removeEmptyFormatting() {
@@ -135,7 +117,7 @@ function renderEditor() {
   serializeEditor();
 }
 async function edit(id = "") {
-  const item = items.value.find((news) => news.id === id);
+  const item = id ? await get(id) : undefined;
   selected.value = id;
   title.value = item?.title ?? "";
   team.value = item?.team_id ?? "";
@@ -148,7 +130,7 @@ async function edit(id = "") {
   renderEditor();
   savedSnapshot.value = formSnapshot.value;
 }
-function submit() {
+async function submit() {
   serializeEditor();
   if (!contentLength.value) {
     error.value = "Escribe el contenido de la noticia antes de guardarla.";
@@ -158,8 +140,8 @@ function submit() {
     error.value = "El contenido no puede superar los 500 caracteres.";
     return;
   }
-  run(() => {
-    save(
+  await run(async () => {
+    await save(
       {
         title: title.value,
         team_id: team.value || null,
@@ -168,7 +150,7 @@ function submit() {
       },
       selected.value || undefined,
     );
-    edit();
+    await edit();
   }, "Borrador guardado.");
 }
 function selectionInsideEditor() {
@@ -176,9 +158,7 @@ function selectionInsideEditor() {
     selection = window.getSelection();
   if (!editor || !selection?.rangeCount) return null;
   const range = selection.getRangeAt(0);
-  return editor.contains(range.commonAncestorContainer)
-    ? { selection, range }
-    : null;
+  return editor.contains(range.commonAncestorContainer) ? { selection, range } : null;
 }
 function rememberSelection(syncButtons = true) {
   const current = selectionInsideEditor();
@@ -258,10 +238,7 @@ function enforceContentLimit(event: InputEvent) {
   const addition =
     event.data?.length ??
     (["insertParagraph", "insertLineBreak"].includes(event.inputType) ? 1 : 0);
-  if (
-    contentLength.value - selectedTextLength() + addition >
-    MAX_CONTENT_LENGTH
-  ) {
+  if (contentLength.value - selectedTextLength() + addition > MAX_CONTENT_LENGTH) {
     event.preventDefault();
     limitAttempted.value = true;
     return;
@@ -284,10 +261,7 @@ function escapeHtml(value: string) {
 function pasteContent(event: ClipboardEvent) {
   event.preventDefault();
   const pasted = event.clipboardData?.getData("text/plain") ?? "";
-  const available = Math.max(
-    0,
-    MAX_CONTENT_LENGTH - contentLength.value + selectedTextLength(),
-  );
+  const available = Math.max(0, MAX_CONTENT_LENGTH - contentLength.value + selectedTextLength());
   const accepted = pasted.slice(0, available);
   if (!boldActive.value) leaveInactiveFormat("bold");
   if (!italicActive.value) leaveInactiveFormat("italic");
@@ -304,8 +278,7 @@ async function upload(event: Event) {
     !["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
     file.size > 5 * 1024 * 1024
   ) {
-    error.value =
-      "Elige una imagen JPG, PNG o WebP de hasta 5 MB para esta demo.";
+    error.value = "Elige una imagen JPG, PNG o WebP de hasta 5 MB .";
     return;
   }
   const reader = new FileReader();
@@ -324,19 +297,17 @@ useHead({ title: "Administrar noticias · Matchday" });
   <main class="news-management">
     <PageHeading
       title="Administrar noticias"
-      kicker="DEMO"
+      kicker="GESTIÓN"
       back-to="/news"
       back-label="Ver publicaciones"
-      description="Prepara borradores, programa noticias y publica durante esta sesión."
+      description="Prepara borradores, programa noticias y publica contenido."
     />
     <p v-if="error" role="alert" class="feedback error">{{ error }}</p>
     <p v-if="message" role="status" class="feedback">{{ message }}</p>
     <div class="columns">
       <ManagementPanel :title="selected ? 'Editar borrador' : 'Nueva noticia'">
         <form @submit.prevent="submit">
-          <label
-            >Título<input v-model="title" maxlength="200" required
-          /></label>
+          <label>Título<input v-model="title" maxlength="200" required /></label>
           <label
             >Equipo<AppSelect v-model="team" :disabled="!!selected"
               ><option value="">Noticia general</option>
@@ -370,9 +341,7 @@ useHead({ title: "Administrar noticias · Matchday" });
               >
                 <em>C</em>
               </button>
-              <span
-                >Selecciona texto o activa el formato antes de escribir</span
-              >
+              <span>Selecciona texto o activa el formato antes de escribir</span>
             </div>
             <div
               ref="contentEditor"
@@ -407,10 +376,7 @@ useHead({ title: "Administrar noticias · Matchday" });
             </div>
           </div>
           <label
-            >Portada<input
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              @change="upload"
+            >Portada<input type="file" accept="image/png,image/jpeg,image/webp" @change="upload"
           /></label>
           <img v-if="cover" :src="cover" alt="Vista previa de portada" /><button
             v-if="cover"
@@ -421,16 +387,13 @@ useHead({ title: "Administrar noticias · Matchday" });
           </button>
           <div class="notice formatted-preview">
             <strong>Vista previa:</strong
-            ><NewsParagraph
-              v-if="previewParagraph"
-              :text="previewParagraph"
-            /><span v-else>Sin contenido</span>
+            ><NewsParagraph v-if="previewParagraph" :text="previewParagraph" /><span v-else
+              >Sin contenido</span
+            >
           </div>
           <div class="actions">
             <button type="submit">Guardar borrador</button
-            ><button v-if="selected" type="button" @click="edit()">
-              Cancelar edición
-            </button>
+            ><button v-if="selected" type="button" @click="edit()">Cancelar edición</button>
           </div>
         </form>
       </ManagementPanel>
@@ -443,49 +406,25 @@ useHead({ title: "Administrar noticias · Matchday" });
             </option></AppSelect
           ></label
         >
-        <label
-          >Fecha de programación<input v-model="date" type="datetime-local"
-        /></label>
-        <button
-          @click="
-            run(() => {
-              const count = publishDue();
-              message = `${count} noticias publicadas.`;
-            }, 'Revisión de noticias vencidas completada.')
-          "
-        >
-          Publicar programadas vencidas
-        </button>
-        <p>
-          La demo revisa las fechas al pulsar este botón; no ejecuta un monitor
-          en segundo plano.
-        </p>
+        <label>Fecha de programación<input v-model="date" type="datetime-local" /></label>
+        <p>Las noticias programadas se publican mediante el monitor del backend.</p>
         <p v-if="!visible.length">No hay noticias en este estado.</p>
         <article v-for="item in visible" :key="item.id" class="item">
           <h3>{{ item.title }}</h3>
           <p>
             {{ labels[item.status]
-            }}<span v-if="item.scheduled_at">
-              · {{ newsDate(item.scheduled_at) }}</span
-            >
+            }}<span v-if="item.scheduled_at"> · {{ newsDate(item.scheduled_at) }}</span>
           </p>
           <div class="actions">
             <template v-if="item.status === 'DRAFT'"
               ><button @click="edit(item.id)">Editar</button
-              ><button
-                @click="
-                  run(
-                    () => act(item.id, 'schedule', date),
-                    'Noticia programada.',
-                  )
-                "
-              >
+              ><button @click="run(() => act(item.id, 'schedule', date), 'Noticia programada.')">
                 Programar</button
               ><button
                 @click="
-                  run(() => {
-                    act(item.id, 'delete');
-                    if (selected === item.id) edit();
+                  run(async () => {
+                    await act(item.id, 'delete');
+                    if (selected === item.id) await edit();
                   }, 'Borrador eliminado.')
                 "
               >
@@ -493,17 +432,15 @@ useHead({ title: "Administrar noticias · Matchday" });
               </button></template
             ><button
               v-if="item.status === 'SCHEDULED'"
-              @click="
-                run(() => act(item.id, 'unschedule'), 'Programación cancelada.')
-              "
+              @click="run(() => act(item.id, 'unschedule'), 'Programación cancelada.')"
             >
               Volver a borrador</button
             ><button
               v-if="item.status !== 'PUBLISHED'"
               @click="
-                run(() => {
-                  act(item.id, 'publish');
-                  if (selected === item.id) edit();
+                run(async () => {
+                  await act(item.id, 'publish');
+                  if (selected === item.id) await edit();
                 }, 'Noticia publicada.')
               "
             >
@@ -611,8 +548,7 @@ form {
 }
 .content-editor.invalid {
   border-color: var(--ui-danger, #e46f68);
-  box-shadow: 0 0 0 3px
-    color-mix(in srgb, var(--ui-danger, #e46f68) 16%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ui-danger, #e46f68) 16%, transparent);
 }
 .content-limit {
   display: flex;

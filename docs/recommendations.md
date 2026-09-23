@@ -1,69 +1,78 @@
 # Recomendaciones por navegación
 
-La ruta `/for-you` muestra «Para ti» con noticias, partidos, torneos y descubrimiento.
-Funciona en modo demo: no llama a la API, no necesita cuentas y no pide seleccionar
-intereses. Tampoco utiliza los favoritos como entrada del recomendador.
+La ruta `/for-you` muestra noticias, partidos, torneos y contenido para descubrir. El visitante no necesita cuenta ni declara preferencias: el sistema aprende de las páginas que consulta y del tiempo activo que dedica a cada contenido.
 
-## Señales y cálculo
+## Captura de actividad
 
-- Se reconocen páginas de detalle existentes de equipos, jugadores, noticias
-  publicadas, partidos y torneos. Listados, administración, formularios, páginas
-  inexistentes y «Para ti» no generan señales.
-- Se exige una permanencia inicial de cinco segundos. El muestreo ocurre cada
-  cinco segundos, con la pestaña visible, la ventana enfocada y actividad de
-  ratón, teclado o desplazamiento durante los últimos treinta segundos.
-- Las recargas o visitas separadas por menos de treinta minutos no aumentan
-  el contador de visitas del mismo contenido. Se acumulan como máximo tres
-  visitas y dos minutos activos por contenido y día UTC.
-- Cada día aporta visitas y tiempo activo. Su peso se reduce a la mitad cada
-  siete días. El historial de más de treinta días se descarta.
-- Consultar jugadores, noticias o partidos aporta interés a sus equipos. Las
-  relaciones existentes de inscripción y de partidos vinculados permiten
-  relacionar contenido con torneos. No se inventa la pertenencia de un partido
-  a un torneo cuando no hay una relación registrada.
-- La puntuación combina afinidad por equipo y torneo, proximidad de la fecha y
-  un refuerzo de partidos en juego. Consultar un contenido reduce ligeramente
-  su prioridad frente a contenido relacionado aún no visto.
-- Descubrimiento reserva hasta cuatro tarjetas no visitadas y distintas de las
-  otras secciones, priorizando menor afinidad. No usa filtrado colaborativo ni
-  afirma que otros usuarios hayan visto un contenido.
+`useNavigationTracking` reconoce las rutas de detalle de equipos, jugadores, noticias, partidos y torneos. Al abrir una ruta elegible:
 
-Sin historial válido se muestran sugerencias generales y una explicación de que
-se adaptarán al navegar. Cada tarjeta indica el motivo de su recomendación.
+1. Genera un `navigation_id` nuevo.
+2. Solicita el detalle con `X-Navigation-Intent: detail-view` y `X-Navigation-Id`.
+3. El backend valida que el contenido exista y pueda generar una señal.
+4. El backend responde con el contenido y una cookie anónima firmada.
 
-## Estado y privacidad
+La cookie la administra el navegador mediante `credentials: include`. No se copia a `localStorage` ni se expone una identidad de otros visitantes.
 
-`localStorage` conserva únicamente clave de contenido, día, número de visitas,
-segundos activos y última actividad bajo `matchday-navigation-v1`. No conserva
-consultas de búsqueda, formularios, coordenadas, teclas ni URL completas. Hay un
-límite de 500 entradas; se validan los datos al leerlos y se descartan fechas
-inválidas, futuras o caducadas. Si el almacenamiento está bloqueado, funciona
-en memoria durante la sesión. La purga del almacenamiento ocurre al abrir la
-aplicación o registrar actividad; no hay un proceso cuando el navegador está cerrado.
+## Tiempo activo
 
-«Borrar historial de recomendaciones» elimina tanto el estado en memoria como
-la copia local. Las visitas posteriores vuelven a generar recomendaciones.
-Las claves de entidades demo que desaparecen al recargar dejan de influir.
-El historial no se sincroniza entre dispositivos ni se envía al backend.
+Mientras la pestaña está visible, la ventana conserva el foco y hubo interacción reciente, el frontend acumula tiempo y envía un heartbeat cada 15 segundos a:
 
-## Organización y pruebas
+```text
+POST /api/recommendations/activity/heartbeat/
+```
 
-`modules/recommendations` separa tipos, cálculo puro, catálogo de contenido,
-seguimiento de navegación, estado, tarjeta y vista. `pages/for-you.vue` es solo
-la entrada de ruta. El seguimiento se instala una vez en `app.vue` y libera
-temporizador y listeners al desmontarse. Los componentes son dueños de su CSS
-y utilizan los valores globales para ambos temas.
+El cuerpo incluye `navigation_id`, tipo, identificador del contenido y segundos activos acumulados. El valor es monotónico y se limita a 120 segundos por navegación. Al ocultar, cambiar de ruta o cerrar la página se intenta enviar un último heartbeat con `sendBeacon`.
 
-Ejecutar desde `matchday-ui` con Node 24:
+Las escrituras utilizan la cookie firmada y CSRF. El cliente obtiene la cookie CSRF desde `GET /api/recommendations/` cuando todavía no existe.
 
-```sh
-node --test tests/recommendations.test.mjs
+## Generación
+
+El frontend no calcula el perfil. Un proceso independiente del backend:
+
+- consume actividad reciente pendiente;
+- pondera equipos y torneos consultados;
+- compara vectores de comportamiento mediante similitud coseno;
+- utiliza visitantes similares para descubrir contenido no consultado;
+- aplica sugerencias generales cuando todavía no existe actividad suficiente;
+- guarda un snapshot con caducidad.
+
+El resultado diferencia afinidad directa por equipo, interés por torneo, visitantes similares, contenido reciente, partidos en vivo y descubrimiento.
+
+## Consulta y borrado
+
+El repositorio de recomendaciones consulta:
+
+```text
+GET /api/recommendations/
+```
+
+La respuesta contiene `personalized`, fechas de generación y caducidad, además de las secciones `news`, `matches`, `tournaments` y `discovery`. Las tarjetas muestran el motivo entregado por la API y enlazan al detalle correspondiente.
+
+El visitante puede eliminar su actividad mediante:
+
+```text
+DELETE /api/recommendations/history/
+```
+
+El backend elimina actividad, perfil y snapshot, y ordena al navegador borrar la cookie firmada. La navegación posterior comienza un historial anónimo nuevo.
+
+## Capas del frontend
+
+- `domain/recommendation-repository.ts`: DTOs y contrato del repositorio.
+- `infrastructure/api-recommendation-repository.ts`: endpoints, CSRF y `sendBeacon`.
+- `composables/useNavigationTracking.ts`: ciclo de vida de la visita y tiempo activo.
+- `composables/useRecommendations.ts`: estado de consulta y adaptación para las vistas.
+- `components/`: tarjetas y carriles compartidos.
+- `views/RecommendationsView.vue`: pantalla de descubrimiento.
+
+El flujo completo también aparece en `docs/diagrams/design/api-flow-sequence.puml` y en los diagramas de recomendaciones del backend.
+
+## Verificación
+
+```bash
+pnpm test
+pnpm format:check
 pnpm build
 ```
 
-Las pruebas cubren afinidad implícita, límites de visitas y tiempo, recencia,
-validación del historial, inicio sin datos, descubrimiento sin duplicados y
-relaciones con torneos. Para verificar interacción: abrir un equipo durante
-más de cinco segundos con la ventana activa, visitar «Para ti», comprobar los
-motivos de las tarjetas, recargar y borrar el historial. Las herramientas de
-desarrollo con foco pueden detener el cómputo de tiempo activo.
+Las pruebas comprueban la composición de repositorios, el uso de cookies y CSRF, la captura de visitas y heartbeats, y las reglas puras de afinidad y descubrimiento que se conservan como referencia del comportamiento esperado.

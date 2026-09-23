@@ -1,10 +1,25 @@
 <script setup lang="ts">
-defineProps<{ title: string; kicker?: string; description?: string; backTo?: string; backLabel?: string }>()
+defineProps<{
+  title: string;
+  kicker?: string;
+  description?: string;
+  backTo?: string;
+  backLabel?: string;
+}>();
 </script>
 <template>
   <header class="page-heading">
-    <NuxtLink v-if="backTo" :to="backTo" class="section-back">← {{ backLabel ?? 'Volver' }}</NuxtLink>
-    <div class="entity-heading"><div><span v-if="kicker" class="section-kicker">{{ kicker }}</span><h1>{{ title }}<span>.</span></h1><p v-if="description">{{ description }}</p></div><slot /></div>
+    <NuxtLink v-if="backTo" :to="backTo" class="section-back"
+      >← {{ backLabel ?? "Volver" }}</NuxtLink
+    >
+    <div class="entity-heading">
+      <div>
+        <span v-if="kicker" class="section-kicker">{{ kicker }}</span>
+        <h1>{{ title }}<span>.</span></h1>
+        <p v-if="description">{{ description }}</p>
+      </div>
+      <slot />
+    </div>
   </header>
 </template>
 
@@ -93,12 +108,31 @@ h1 > span {
   .entity-heading {
     row-gap: 24px;
   }
-}.page-heading{margin-bottom:24px}.page-heading .entity-heading{margin-bottom:0}
+}
+.page-heading {
+  margin-bottom: 24px;
+}
+.page-heading .entity-heading {
+  margin-bottom: 0;
+}
 
 @media (prefers-reduced-motion: no-preference) {
-  button, a, input { transition: color .18s ease, background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
-  button:not(:disabled):active, .primary-action:active { transform: translateY(1px); }
-  input:focus-visible { box-shadow: 0 0 0 3px var(--ui-success-soft, rgba(189, 237, 117, .12)); }
+  button,
+  a,
+  input {
+    transition:
+      color 0.18s ease,
+      background-color 0.18s ease,
+      border-color 0.18s ease,
+      box-shadow 0.18s ease,
+      transform 0.18s ease;
+  }
+  button:not(:disabled):active,
+  .primary-action:active {
+    transform: translateY(1px);
+  }
+  input:focus-visible {
+    box-shadow: 0 0 0 3px var(--ui-success-soft, rgba(189, 237, 117, 0.12));
+  }
 }
 </style>
-

@@ -147,4 +147,14 @@ html {
   html {
     scroll-padding-top: 91px;
   }
-}button,input,select,a{scroll-margin-top:24px}:focus-visible{outline:2px solid var(--accent,#bded75);outline-offset:4px}
+}
+button,
+input,
+select,
+a {
+  scroll-margin-top: 24px;
+}
+:focus-visible {
+  outline: 2px solid var(--accent, #bded75);
+  outline-offset: 4px;
+}

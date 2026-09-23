@@ -1,11 +1,7 @@
 <script setup lang="ts">
-import AnimatedHeroIcon from "~/components/AnimatedHeroIcon.vue"
+import AnimatedHeroIcon from "~/components/AnimatedHeroIcon.vue";
 
-import {
-  ArrowLeftIcon,
-  ArrowRightIcon,
-  PlusIcon,
-} from "@heroicons/vue/24/solid";
+import { ArrowLeftIcon, ArrowRightIcon, PlusIcon } from "@heroicons/vue/24/solid";
 defineProps<{
   events: { kind: string; label: string; minute: number; added?: number }[];
   detailed?: boolean;
@@ -56,19 +52,13 @@ defineProps<{
         event.kind === "injury" ? "✚" : event.kind === "assist" ? "A" : "⚽"
       }}</span>
       <span v-if="detailed" class="event-description"
-        >{{ event.label }} · {{ event.minute
-        }}{{ event.added ? "+" + event.added : "" }}′</span
+        >{{ event.label }} · {{ event.minute }}{{ event.added ? "+" + event.added : "" }}′</span
       >
     </span>
   </span>
 </template>
 
 <style scoped>
-
-
-
-
-
 .event-badges {
   display: inline-flex;
   align-items: center;
@@ -125,9 +115,22 @@ defineProps<{
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  button, a, input { transition: color .18s ease, background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
-  button:not(:disabled):active, .primary-action:active { transform: translateY(1px); }
-  input:focus-visible { box-shadow: 0 0 0 3px var(--ui-success-soft, rgba(189, 237, 117, .12)); }
+  button,
+  a,
+  input {
+    transition:
+      color 0.18s ease,
+      background-color 0.18s ease,
+      border-color 0.18s ease,
+      box-shadow 0.18s ease,
+      transform 0.18s ease;
+  }
+  button:not(:disabled):active,
+  .primary-action:active {
+    transform: translateY(1px);
+  }
+  input:focus-visible {
+    box-shadow: 0 0 0 3px var(--ui-success-soft, rgba(189, 237, 117, 0.12));
+  }
 }
 </style>
-

@@ -1,0 +1,21 @@
+@startuml MatchdayNewsNavigation
+title Navegación interna - Noticias
+
+left to right direction
+skinparam linetype ortho
+
+rectangle "Listado\n/news" as List
+rectangle "Detalle\n/news/:id" as Detail
+rectangle "Administración\n/news/manage" as Manage
+
+List --> Detail : leer noticia
+List --> Manage : administrar
+Detail --> List : volver
+Manage --> Detail : abrir publicada
+Manage --> List : volver
+
+note bottom of Manage
+  Borrador -> programada o publicada.
+  Solo las publicadas aparecen en el listado.
+end note
+@enduml

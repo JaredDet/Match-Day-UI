@@ -1,10 +1,156 @@
-<script setup lang="ts">
-import { useTournamentManagement } from '~/modules/tournaments/composables/useTournamentManagement'
-import { useDemoTeams } from '~/modules/teams/composables/useDemoTeams'
-const props = defineProps<{ seasonId: string; tab?: string }>()
-const { phases, matches, standings } = useTournamentManagement(), { teamById } = useDemoTeams()
-const visible = computed(() => phases.value.filter(p => p.season === props.seasonId && (!props.tab || props.tab === 'phases' || (props.tab === 'groups' ? p.kind === 'groups' : p.kind !== 'groups'))))
-const findMatch = (id: string) => matches.value.find(m => m.id === id)
+﻿<script setup lang="ts">
+import { useTournamentManagement } from "~/modules/tournaments/composables/useTournamentManagement";
+import { useTeams } from "~/modules/teams/composables/useTeams";
+const props = defineProps<{ seasonId: string; tab?: string }>();
+const { phases, matches, standings } = useTournamentManagement(),
+  { teamById } = useTeams();
+const visible = computed(() =>
+  phases.value.filter(
+    (p) =>
+      p.season === props.seasonId &&
+      (!props.tab ||
+        props.tab === "phases" ||
+        (props.tab === "groups" ? p.kind === "groups" : p.kind !== "groups")),
+  ),
+);
+const findMatch = (id: string) => matches.value.find((m) => m.id === id);
 </script>
-<template><div class="season-board"><p v-if="!visible.length">Esta temporada todavía no tiene {{ tab === 'bracket' ? 'eliminatorias' : 'fases' }}. Puedes prepararlas desde la gestión del torneo.</p><section v-for="phase in visible" :key="phase.id" class="phase"><h2>{{ phase.name }}</h2><p>{{ phase.status === 'finished' ? 'Finalizada' : 'En preparación o en juego' }}<span v-if="phase.generated"> · Estructura bloqueada</span></p><div v-for="group in phase.groups" :key="group.id" class="group"><h3>Grupo {{ group.name }}</h3><div class="scroll"><table><caption>Clasificación · {{ group.teams.length }} equipos</caption><thead><tr><th>Equipo</th><th>PJ</th><th>G</th><th>E</th><th>P</th><th>GF</th><th>GC</th><th>DG</th><th>PTS</th></tr></thead><tbody><tr v-for="row in standings(phase.id, group.id)" :key="row.id"><th><NuxtLink :to="`/teams/${row.id}`">{{ teamById(row.id)?.name }}</NuxtLink><small v-if="row.tied"> · Desempate pendiente</small></th><td>{{ row.played }}</td><td>{{ row.wins }}</td><td>{{ row.draws }}</td><td>{{ row.losses }}</td><td>{{ row.gf }}</td><td>{{ row.ga }}</td><td>{{ row.gf-row.ga }}</td><td><strong>{{ row.points }}</strong></td></tr></tbody></table></div></div><p v-if="phase.generated && !phase.fixtures.length">Esperando los ganadores de la ronda anterior.</p><ul><li v-for="fixture in phase.fixtures" :key="fixture.match"><NuxtLink :to="`/matches/${fixture.match}`">{{ findMatch(fixture.match)?.home_team.name }} {{ findMatch(fixture.match)?.home_team.score }} – {{ findMatch(fixture.match)?.away_team.score }} {{ findMatch(fixture.match)?.away_team.name }}</NuxtLink><span> · {{ findMatch(fixture.match)?.status === 'finished' ? 'Finalizado' : findMatch(fixture.match)?.status === 'live' ? 'En juego' : 'Programado' }}</span></li></ul></section></div></template>
-<style scoped>.season-board{display:grid;gap:24px;color:var(--text-color)}.phase{display:grid;gap:16px;background:var(--surface);padding:24px;border:1px solid var(--border);border-radius:12px}.group{display:grid;gap:12px}.scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px}caption{text-align:left;color:var(--muted);padding:8px 0}td,th{text-align:center;padding:12px;border-bottom:1px solid var(--border)}th:first-child{text-align:left;min-width:180px}a{color:var(--accent)}ul{display:grid;gap:12px;padding-left:20px}small{display:block;color:var(--muted)}p{line-height:1.6}</style>
+<template>
+  <div class="season-board">
+    <p v-if="!visible.length">
+      Esta temporada todavía no tiene {{ tab === "bracket" ? "eliminatorias" : "fases" }}. Puedes
+      prepararlas desde la gestión del torneo.
+    </p>
+    <section v-for="phase in visible" :key="phase.id" class="phase">
+      <h2>{{ phase.name }}</h2>
+      <p>
+        {{ phase.status === "finished" ? "Finalizada" : "En preparación o en juego"
+        }}<span v-if="phase.generated"> · Estructura bloqueada</span>
+      </p>
+      <div v-for="group in phase.groups" :key="group.id" class="group">
+        <h3>Grupo {{ group.name }}</h3>
+        <div class="scroll">
+          <table>
+            <caption>
+              Clasificación ·
+              {{
+                group.teams.length
+              }}
+              equipos
+            </caption>
+            <thead>
+              <tr>
+                <th>Equipo</th>
+                <th>PJ</th>
+                <th>G</th>
+                <th>E</th>
+                <th>P</th>
+                <th>GF</th>
+                <th>GC</th>
+                <th>DG</th>
+                <th>PTS</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in standings(phase.id, group.id)" :key="row.id">
+                <th>
+                  <NuxtLink :to="`/teams/${row.id}`">{{ teamById(row.id)?.name }}</NuxtLink
+                  ><small v-if="row.tied"> · Desempate pendiente</small>
+                </th>
+                <td>{{ row.played }}</td>
+                <td>{{ row.wins }}</td>
+                <td>{{ row.draws }}</td>
+                <td>{{ row.losses }}</td>
+                <td>{{ row.gf }}</td>
+                <td>{{ row.ga }}</td>
+                <td>{{ row.gf - row.ga }}</td>
+                <td>
+                  <strong>{{ row.points }}</strong>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <p v-if="phase.generated && !phase.fixtures.length">
+        Esperando los ganadores de la ronda anterior.
+      </p>
+      <ul>
+        <li v-for="fixture in phase.fixtures" :key="fixture.match">
+          <NuxtLink :to="`/matches/${fixture.match}`"
+            >{{ findMatch(fixture.match)?.home_team.name }}
+            {{ findMatch(fixture.match)?.home_team.score }} –
+            {{ findMatch(fixture.match)?.away_team.score }}
+            {{ findMatch(fixture.match)?.away_team.name }}</NuxtLink
+          ><span>
+            ·
+            {{
+              findMatch(fixture.match)?.status === "finished"
+                ? "Finalizado"
+                : findMatch(fixture.match)?.status === "live"
+                  ? "En juego"
+                  : "Programado"
+            }}</span
+          >
+        </li>
+      </ul>
+    </section>
+  </div>
+</template>
+<style scoped>
+.season-board {
+  display: grid;
+  gap: 24px;
+  color: var(--text-color);
+}
+.phase {
+  display: grid;
+  gap: 16px;
+  background: var(--surface);
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.group {
+  display: grid;
+  gap: 12px;
+}
+.scroll {
+  overflow-x: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+caption {
+  text-align: left;
+  color: var(--muted);
+  padding: 8px 0;
+}
+td,
+th {
+  text-align: center;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+th:first-child {
+  text-align: left;
+  min-width: 180px;
+}
+a {
+  color: var(--accent);
+}
+ul {
+  display: grid;
+  gap: 12px;
+  padding-left: 20px;
+}
+small {
+  display: block;
+  color: var(--muted);
+}
+p {
+  line-height: 1.6;
+}
+</style>

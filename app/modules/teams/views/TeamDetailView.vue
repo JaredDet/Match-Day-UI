@@ -1,23 +1,22 @@
-<script setup lang="ts">
-import { useDemoNews } from "~/modules/news/composables/useDemoNews";
+﻿<script setup lang="ts">
+import { useNews } from "~/modules/news/composables/useNews";
 import TeamBadge from "~/modules/teams/components/TeamBadge.vue";
 import EmptyState from "~/components/EmptyState.vue";
-import { useTeamProfiles } from "~/modules/teams/composables/useTeamProfiles";
+import { useTeams } from "~/modules/teams/composables/useTeams";
+import { useRepositories } from "~/core/api/repository-context";
 
 import { newsDate } from "~/modules/news/data/news";
 import { positionNames, resultNames } from "~/modules/teams/data/teamProfiles";
 const resultLetters = { win: "V", draw: "E", loss: "D" } as const;
-const { publishedNews } = useDemoNews();
-const route = useRoute(),
-  profiles = useTeamProfiles();
-const team = computed(() =>
-  profiles.value.details.find((t) => t.id === route.params.id),
+const { items: publishedNews } = useNews("PUBLISHED");
+const route = useRoute();
+const { teams } = useTeams();
+const repository = useRepositories().teams;
+const { data: team } = await useAsyncData(`team-detail-${route.params.id}`, () =>
+  repository.get(String(route.params.id)),
 );
-const summary = computed(() =>
-  profiles.value.summaries.find((t) => t.id === route.params.id),
-);
-if (!team.value)
-  throw createError({ statusCode: 404, statusMessage: "Equipo no encontrado" });
+const summary = computed(() => teams.value.find((item) => item.id === route.params.id));
+if (!team.value) throw createError({ statusCode: 404, statusMessage: "Equipo no encontrado" });
 const tab = ref("overview");
 const tabs = [
   { id: "overview", label: "Resumen" },
@@ -69,19 +68,19 @@ useSeoMeta(() => ({
     <NuxtLink to="/teams" class="section-back">← Todos los equipos</NuxtLink>
     <div class="entity-heading">
       <div class="entity-heading-badge">
-        <TeamBadge class="large-badge" :name="team.name" />
+        <TeamBadge class="large-badge" :name="team.name" :src="team.crest" />
       </div>
       <div class="entity-heading-copy">
         <span class="section-kicker">EQUIPO</span>
         <h1>{{ team.name }}<span>.</span></h1>
         <p>DT · {{ team.head_coach_name ?? "Sin técnico registrado" }}</p>
+        <p v-if="team.city || team.stadium_name || team.founded_year" class="team-metadata">
+          {{ [team.city, team.stadium_name, team.founded_year].filter(Boolean).join(" · ") }}
+        </p>
       </div>
     </div>
-    <p class="demo-caption">Datos de demostración · Escudo provisional</p>
-    <ShareButton
-      :title="team.name"
-      :text="`Plantilla, noticias y resultados de ${team.name}.`"
-    />
+    <p class="demo-caption">Plantilla, resultados y estadísticas del equipo</p>
+    <ShareButton :title="team.name" :text="`Plantilla, noticias y resultados de ${team.name}.`" />
     <nav class="entity-tabs" aria-label="Secciones del equipo">
       <button
         v-for="item in tabs"
@@ -116,16 +115,13 @@ useSeoMeta(() => ({
                 ><strong>vs. {{ summary.next_match.opponent_name }}</strong
                 ><span
                   >{{
-                    new Date(summary.next_match.scheduled_at).toLocaleString(
-                      "es-CL",
-                      {
-                        timeZone: "America/Santiago",
-                        day: "numeric",
-                        month: "long",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      },
-                    )
+                    new Date(summary.next_match.scheduled_at).toLocaleString("es-CL", {
+                      timeZone: "America/Santiago",
+                      day: "numeric",
+                      month: "long",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
                   }}
                   · Santiago</span
                 ><span class="text-action">Ver partido →</span></NuxtLink
@@ -141,17 +137,13 @@ useSeoMeta(() => ({
                   :class="['result-pill', match.result]"
                   :title="`${resultNames[match.result]} contra ${match.opponent_name}`"
                   >{{ resultLetters[match.result]
-                  }}<span class="sr-only">{{
-                    resultNames[match.result]
-                  }}</span></span
+                  }}<span class="sr-only">{{ resultNames[match.result] }}</span></span
                 >
               </div>
               <p v-if="!team.recent_matches.length" class="profile-muted">
                 Todavía no hay partidos finalizados.
               </p>
-              <button v-else class="text-action" @click="tab = 'matches'">
-                Ver resultados →
-              </button>
+              <button v-else class="text-action" @click="tab = 'matches'">Ver resultados →</button>
             </div>
           </div>
           <div class="news-panel">
@@ -165,15 +157,8 @@ useSeoMeta(() => ({
               description="Este equipo todavía no tiene publicaciones."
             />
             <div class="news-grid">
-              <article
-                v-for="item in teamNews"
-                :key="item.title"
-                class="news-card"
-              >
-                <NuxtLink
-                  v-if="item.image"
-                  :to="`/news/${item.id}`"
-                  class="news-cover"
+              <article v-for="item in teamNews" :key="item.title" class="news-card">
+                <NuxtLink v-if="item.image" :to="`/news/${item.id}`" class="news-cover"
                   ><img :src="item.image" alt=""
                 /></NuxtLink>
                 <span class="news-tag">{{ item.category }}</span>
@@ -194,9 +179,7 @@ useSeoMeta(() => ({
               :to="`/matches/${match.match_id}`"
               class="profile-result"
               ><div class="profile-result-main">
-                <span class="profile-result-opponent"
-                  >vs. {{ match.opponent_name }}</span
-                >
+                <span class="profile-result-opponent">vs. {{ match.opponent_name }}</span>
                 <time>{{
                   new Date(match.scheduled_at).toLocaleDateString("es-CL", {
                     timeZone: "America/Santiago",
@@ -208,27 +191,16 @@ useSeoMeta(() => ({
               </div>
               <div class="profile-score-block">
                 <div class="profile-score-stack">
-                  <strong
-                    >{{ match.goals_for }} – {{ match.goals_against }}</strong
-                  >
+                  <strong>{{ match.goals_for }} – {{ match.goals_against }}</strong>
                   <small
-                    v-if="
-                      match.penalty_score_for != null &&
-                      match.penalty_score_against != null
-                    "
-                    >Pen. {{ match.penalty_score_for }}–{{
-                      match.penalty_score_against
-                    }}</small
+                    v-if="match.penalty_score_for != null && match.penalty_score_against != null"
+                    >Pen. {{ match.penalty_score_for }}–{{ match.penalty_score_against }}</small
                   >
                 </div>
               </div>
-              <span
-                :class="['result-pill', match.result]"
-                :title="resultNames[match.result]"
+              <span :class="['result-pill', match.result]" :title="resultNames[match.result]"
                 >{{ resultLetters[match.result]
-                }}<span class="sr-only">{{
-                  resultNames[match.result]
-                }}</span></span
+                }}<span class="sr-only">{{ resultNames[match.result] }}</span></span
               ></NuxtLink
             >
             <p v-if="!team.recent_matches.length" class="section-empty">
@@ -236,8 +208,8 @@ useSeoMeta(() => ({
             </p>
           </div>
           <p v-if="team.recent_matches.length" class="demo-caption">
-            Marcadores desde la perspectiva de {{ team.name }}. El resultado
-            puede incluir una tanda de penales.
+            Marcadores desde la perspectiva de {{ team.name }}. El resultado puede incluir una tanda
+            de penales.
           </p></template
         ><template v-else-if="tab === 'news'"
           ><div class="content-heading">
@@ -250,15 +222,8 @@ useSeoMeta(() => ({
             description="Este equipo todavía no tiene publicaciones."
           />
           <div class="news-grid full-news-grid">
-            <article
-              v-for="item in teamNews"
-              :key="item.title"
-              class="news-card"
-            >
-              <NuxtLink
-                v-if="item.image"
-                :to="`/news/${item.id}`"
-                class="news-cover"
+            <article v-for="item in teamNews" :key="item.title" class="news-card">
+              <NuxtLink v-if="item.image" :to="`/news/${item.id}`" class="news-cover"
                 ><img :src="item.image" alt=""
               /></NuxtLink>
               <span class="news-tag">{{ item.category }}</span>
@@ -280,9 +245,7 @@ useSeoMeta(() => ({
               :key="player.id"
               :to="`/players/${player.id}`"
               class="team-roster-player"
-              ><span class="shirt-number">{{
-                player.preferred_shirt_number ?? "–"
-              }}</span>
+              ><span class="shirt-number">{{ player.preferred_shirt_number ?? "–" }}</span>
               <div>
                 <strong>{{ player.name }}</strong
                 ><small>{{

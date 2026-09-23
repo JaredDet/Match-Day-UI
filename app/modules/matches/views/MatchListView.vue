@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import MatchCalendar from "~/modules/matches/components/MatchCalendar.vue"
-import AnimatedHeroIcon from "~/components/AnimatedHeroIcon.vue"
-import { useDemoMatches } from "~/modules/matches/composables/useDemoMatches"
+import MatchCalendar from "~/modules/matches/components/MatchCalendar.vue";
+import AnimatedHeroIcon from "~/components/AnimatedHeroIcon.vue";
+import { useMatches } from "~/modules/matches/composables/useMatches";
 
 import { TransitionRoot } from "@headlessui/vue";
 import {
@@ -14,7 +14,7 @@ import {
 import { StarIcon as StarSolidIcon } from "@heroicons/vue/24/solid";
 import { matchState, goalMinute, goalLabel, time } from "~/modules/matches/utils/matches";
 import { initials, teamColor } from "~/modules/teams/utils/identity";
-const { today, matches } = useDemoMatches();
+const { today, matches } = useMatches();
 const selectedDate = useState("matchday-date", () => today.value);
 watch(selectedDate, (value) => {
   if (!value) selectedDate.value = today.value;
@@ -79,9 +79,7 @@ function showMatchDate(date: string) {
   favoritesOnly.value = false;
   selectedDate.value = date;
 }
-const liveCount = computed(
-  () => dated.value.filter((m) => m.status === "live").length,
-);
+const liveCount = computed(() => dated.value.filter((m) => m.status === "live").length);
 const favoriteToast = ref<{
   id: string;
   title: string;
@@ -118,9 +116,7 @@ function toggleFavorite(id: string) {
   const match = matches.value.find((item) => item.id === id)!;
   favoriteToast.value = {
     id,
-    title: wasSaved
-      ? "Partido eliminado de favoritos"
-      : "¡Partido guardado en favoritos!",
+    title: wasSaved ? "Partido eliminado de favoritos" : "¡Partido guardado en favoritos!",
     teams: `${match.home_team.name} · ${match.away_team.name}`,
     wasSaved,
   };
@@ -147,11 +143,8 @@ function remainingGoals(goals: unknown[]) {
 
 onMounted(() => {
   try {
-    const stored = JSON.parse(
-      localStorage.getItem("matchday-favorites") || "[]",
-    );
-    if (Array.isArray(stored))
-      favorites.value = stored.filter((v) => typeof v === "string");
+    const stored = JSON.parse(localStorage.getItem("matchday-favorites") || "[]");
+    if (Array.isArray(stored)) favorites.value = stored.filter((v) => typeof v === "string");
   } catch {}
 });
 
@@ -183,11 +176,7 @@ useHead({ title: "Matchday · La jornada" });
       </button>
     </section>
 
-    <section
-      id="matches"
-      class="matches-section"
-      aria-labelledby="matches-title"
-    >
+    <section id="matches" class="matches-section" aria-labelledby="matches-title">
       <div class="section-heading">
         <div>
           <h2 id="matches-title">
@@ -217,9 +206,7 @@ useHead({ title: "Matchday · La jornada" });
             @click="filter = tab.id"
           >
             <span v-if="tab.id === 'live'" class="green-dot" />{{ tab.label
-            }}<span v-if="tab.id === 'live'" class="tab-count">{{
-              liveCount
-            }}</span>
+            }}<span v-if="tab.id === 'live'" class="tab-count">{{ liveCount }}</span>
           </button>
         </div>
         <span class="timezone">Hora de Santiago · GMT−3 / GMT−4</span>
@@ -263,25 +250,17 @@ useHead({ title: "Matchday · La jornada" });
           </div>
           <div class="fixture">
             <div class="team">
-              <span
-                class="crest"
-                :style="{ '--team-color': teamColor(match.home_team.name) }"
-                >{{ initials(match.home_team.name) }}</span
-              >
+              <span class="crest" :style="{ '--team-color': teamColor(match.home_team.name) }">{{
+                initials(match.home_team.name)
+              }}</span>
               <h4>{{ match.home_team.name }}</h4>
             </div>
             <div class="score">
               <template v-if="match.status === 'scheduled'"
-                ><strong class="kickoff">{{
-                  time(match.scheduled_at)
-                }}</strong></template
+                ><strong class="kickoff">{{ time(match.scheduled_at) }}</strong></template
               ><template v-else
-                ><strong
-                  >{{ match.home_team.score }} <em>–</em>
-                  {{ match.away_team.score }}</strong
-                ><span
-                  v-if="match.home_team.penalty_score != null"
-                  class="penalty-score"
+                ><strong>{{ match.home_team.score }} <em>–</em> {{ match.away_team.score }}</strong
+                ><span v-if="match.home_team.penalty_score != null" class="penalty-score"
                   >Pen. {{ match.home_team.penalty_score }}–{{
                     match.away_team.penalty_score
                   }}</span
@@ -289,11 +268,9 @@ useHead({ title: "Matchday · La jornada" });
               >
             </div>
             <div class="team">
-              <span
-                class="crest"
-                :style="{ '--team-color': teamColor(match.away_team.name) }"
-                >{{ initials(match.away_team.name) }}</span
-              >
+              <span class="crest" :style="{ '--team-color': teamColor(match.away_team.name) }">{{
+                initials(match.away_team.name)
+              }}</span>
               <h4>{{ match.away_team.name }}</h4>
             </div>
           </div>
@@ -305,20 +282,11 @@ useHead({ title: "Matchday · La jornada" });
             class="scorers"
             aria-label="Goleadores"
           >
-            <ul
-              class="scorers-home"
-              :aria-label="`Goles de ${match.home_team.name}`"
-            >
-              <li
-                v-for="(goal, index) in previewGoals(match.home_team.goals)"
-                :key="index"
-              >
+            <ul class="scorers-home" :aria-label="`Goles de ${match.home_team.name}`">
+              <li v-for="(goal, index) in previewGoals(match.home_team.goals)" :key="index">
                 {{ goalLabel(goal) }} <span>{{ goalMinute(goal) }}</span>
               </li>
-              <li
-                v-if="remainingGoals(match.home_team.goals)"
-                class="more-goals"
-              >
+              <li v-if="remainingGoals(match.home_team.goals)" class="more-goals">
                 +{{ remainingGoals(match.home_team.goals) }} goles
               </li>
             </ul>
@@ -335,20 +303,11 @@ useHead({ title: "Matchday · La jornada" });
                 stroke-width=".65"
               />
             </svg>
-            <ul
-              class="scorers-away"
-              :aria-label="`Goles de ${match.away_team.name}`"
-            >
-              <li
-                v-for="(goal, index) in previewGoals(match.away_team.goals)"
-                :key="index"
-              >
+            <ul class="scorers-away" :aria-label="`Goles de ${match.away_team.name}`">
+              <li v-for="(goal, index) in previewGoals(match.away_team.goals)" :key="index">
                 {{ goalLabel(goal) }} <span>{{ goalMinute(goal) }}</span>
               </li>
-              <li
-                v-if="remainingGoals(match.away_team.goals)"
-                class="more-goals"
-              >
+              <li v-if="remainingGoals(match.away_team.goals)" class="more-goals">
                 +{{ remainingGoals(match.away_team.goals) }} goles
               </li>
             </ul>
@@ -383,41 +342,21 @@ useHead({ title: "Matchday · La jornada" });
               : "Cambia los filtros o borra la búsqueda para ver los encuentros de esta jornada."
           }}
         </p>
-        <button
-          v-if="!dated.length && nextMatchDate"
-          @click="showMatchDate(nextMatchDate)"
-        >
+        <button v-if="!dated.length && nextMatchDate" @click="showMatchDate(nextMatchDate)">
           Ir a la próxima jornada con partidos
-          <AnimatedHeroIcon
-            :icon="ArrowUpRightIcon"
-            motion="arrow"
-            class="ui-icon inline-icon"
-          />
+          <AnimatedHeroIcon :icon="ArrowUpRightIcon" motion="arrow" class="ui-icon inline-icon" />
         </button>
         <button v-else-if="dated.length" @click="showMatchDate(selectedDate)">
           Ver todos los partidos del día
-          <AnimatedHeroIcon
-            :icon="ArrowUpRightIcon"
-            motion="arrow"
-            class="ui-icon inline-icon"
-          />
+          <AnimatedHeroIcon :icon="ArrowUpRightIcon" motion="arrow" class="ui-icon inline-icon" />
         </button>
-        <button
-          v-else-if="selectedDate !== today"
-          @click="showMatchDate(today)"
-        >
+        <button v-else-if="selectedDate !== today" @click="showMatchDate(today)">
           Volver a hoy
-          <AnimatedHeroIcon
-            :icon="ArrowUpRightIcon"
-            motion="arrow"
-            class="ui-icon inline-icon"
-          />
+          <AnimatedHeroIcon :icon="ArrowUpRightIcon" motion="arrow" class="ui-icon inline-icon" />
         </button>
       </div>
       <div class="end-note">
-        <span class="green-dot" />Cada encuentro tiene algo que contar<span
-          class="end-line"
-        />
+        <span class="green-dot" />Cada encuentro tiene algo que contar<span class="end-line" />
       </div>
     </section>
 
@@ -447,11 +386,7 @@ useHead({ title: "Matchday · La jornada" });
               ><span>{{ favoriteToast?.teams }}</span>
             </div>
             <button class="toast-undo" @click="undoFavorite">Deshacer</button>
-            <button
-              class="toast-close"
-              aria-label="Cerrar aviso"
-              @click="closeToast"
-            >
+            <button class="toast-close" aria-label="Cerrar aviso" @click="closeToast">
               <XMarkIcon aria-hidden="true" />
             </button>
           </div>
@@ -1178,9 +1113,6 @@ h2 {
   transform: translateY(-1px);
 }
 
-
-
-
 .favorite-toast-region {
   position: fixed;
   bottom: 28px;
@@ -1283,9 +1215,22 @@ h2 {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  button, a, input { transition: color .18s ease, background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
-  button:not(:disabled):active, .primary-action:active { transform: translateY(1px); }
-  input:focus-visible { box-shadow: 0 0 0 3px var(--ui-success-soft, rgba(189, 237, 117, .12)); }
+  button,
+  a,
+  input {
+    transition:
+      color 0.18s ease,
+      background-color 0.18s ease,
+      border-color 0.18s ease,
+      box-shadow 0.18s ease,
+      transform 0.18s ease;
+  }
+  button:not(:disabled):active,
+  .primary-action:active {
+    transform: translateY(1px);
+  }
+  input:focus-visible {
+    box-shadow: 0 0 0 3px var(--ui-success-soft, rgba(189, 237, 117, 0.12));
+  }
 }
 </style>
-

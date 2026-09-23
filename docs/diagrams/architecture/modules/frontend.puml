@@ -1,0 +1,25 @@
+@startuml MatchdayUIComponents
+!include <C4/C4_Component>
+title Matchday UI - Componentes internos
+Container_Boundary(ui, "Matchday UI") {
+  Component(pages, "Pages", "Nuxt routes", "Resuelve rutas y renderiza vistas")
+  Component(views, "Views y components", "Vue", "Presentación, estados y formularios")
+  Component(composables, "Composables", "Vue", "Estado de consultas y navegación")
+  Component(usecases, "Casos de uso", "TypeScript", "Coordina escrituras de varios pasos")
+  Component(contracts, "Interfaces de repositorio", "TypeScript", "Contratos del dominio del frontend")
+  Component(adapters, "Repositorios API", "TypeScript", "Adapta DTOs y endpoints")
+  Component(http, "HTTP client", "$fetch", "Cookies, CSRF y errores uniformes")
+  Component(plugin, "Repository plugin", "Nuxt plugin", "Compone dependencias")
+}
+System_Ext(api, "Matchday API", "Backend Django")
+Rel(pages, views, "Renderiza")
+Rel(views, composables, "Consulta")
+Rel(views, usecases, "Ejecuta")
+Rel(composables, contracts, "Depende de")
+Rel(usecases, contracts, "Depende de")
+Rel(plugin, adapters, "Construye")
+Rel(adapters, contracts, "Implementa")
+Rel(adapters, http, "Usa")
+Rel(http, api, "GET / POST / PUT / PATCH / DELETE", "HTTPS")
+SHOW_LEGEND()
+@enduml

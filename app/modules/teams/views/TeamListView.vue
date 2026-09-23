@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import TeamBadge from "~/modules/teams/components/TeamBadge.vue"
-import PageHeading from "~/components/PageHeading.vue"
-import AnimatedHeroIcon from "~/components/AnimatedHeroIcon.vue"
-import { useTeamProfiles } from "~/modules/teams/composables/useTeamProfiles"
+import TeamBadge from "~/modules/teams/components/TeamBadge.vue";
+import PageHeading from "~/components/PageHeading.vue";
+import AnimatedHeroIcon from "~/components/AnimatedHeroIcon.vue";
+import { useTeams } from "~/modules/teams/composables/useTeams";
 
 import { ArrowUpRightIcon } from "@heroicons/vue/24/outline";
 import { resultNames } from "~/modules/teams/data/teamProfiles";
-const profiles = useTeamProfiles();
+const { teams } = useTeams();
 const search = ref("");
 const visible = computed(() =>
-  profiles.value.summaries.filter((t) =>
+  teams.value.filter((t) =>
     t.name
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
@@ -26,34 +26,33 @@ useHead({ title: "Equipos · Matchday" });
 </script>
 <template>
   <main class="competition-page">
-    <PageHeading title="Equipos" kicker="LOS PROTAGONISTAS" description="Encuentra tu club y sigue sus resultados."><div class="heading-actions"><ActionLink to="/players">Ver jugadores</ActionLink><ActionLink to="/teams/manage">Administrar equipos</ActionLink></div></PageHeading>
+    <PageHeading
+      title="Equipos"
+      kicker="LOS PROTAGONISTAS"
+      description="Encuentra tu club y sigue sus resultados."
+      ><div class="heading-actions">
+        <ActionLink to="/players">Ver jugadores</ActionLink
+        ><ActionLink to="/teams/manage">Administrar equipos</ActionLink>
+      </div></PageHeading
+    >
     <div class="content-heading">
       <h2>{{ visible.length }} equipos</h2>
       <div class="team-actions">
         <label class="team-search"
-          >Buscar equipo<input
-            v-model="search"
-            type="search"
-            placeholder="Nombre del equipo"
+          >Buscar equipo<input v-model="search" type="search" placeholder="Nombre del equipo"
         /></label>
-        <NuxtLink class="primary-action" to="/teams/register"
-          >Crear equipo</NuxtLink
-        >
+        <NuxtLink class="primary-action" to="/teams/register">Crear equipo</NuxtLink>
       </div>
     </div>
     <div class="team-directory">
-      <article
-        v-for="team in visible"
-        :key="team.id"
-        class="info-panel team-card"
-      >
+      <article v-for="team in visible" :key="team.id" class="info-panel team-card">
         <NuxtLink
           :to="`/teams/${team.id}`"
           class="team-card-open"
           :aria-label="`Ver equipo ${team.name}`"
         />
         <NuxtLink :to="`/teams/${team.id}`" class="directory-title"
-          ><TeamBadge :name="team.name" />
+          ><TeamBadge :name="team.name" :src="team.crest" />
           <h2>{{ team.name }}</h2></NuxtLink
         >
         <AnimatedHeroIcon
@@ -67,18 +66,14 @@ useHead({ title: "Equipos · Matchday" });
           <div class="directory-match-grid">
             <div class="directory-match directory-match--recent">
               <span>Último</span
-              ><NuxtLink
-                v-if="team.last_match"
-                :to="`/matches/${team.last_match.match_id}`"
+              ><NuxtLink v-if="team.last_match" :to="`/matches/${team.last_match.match_id}`"
                 ><span class="recent-match-summary"
                   ><span :class="['result-pill', team.last_match.result]">{{
                     resultNames[team.last_match.result]
                   }}</span
                   ><span class="recent-score-stack"
                     ><strong class="recent-match-score"
-                      >{{ team.last_match.goals_for }}–{{
-                        team.last_match.goals_against
-                      }}</strong
+                      >{{ team.last_match.goals_for }}–{{ team.last_match.goals_against }}</strong
                     ><small
                       v-if="
                         team.last_match.penalty_score_for != null &&
@@ -98,22 +93,17 @@ useHead({ title: "Equipos · Matchday" });
             </div>
             <div class="directory-match directory-match--next">
               <span>Próximo</span
-              ><NuxtLink
-                v-if="team.next_match"
-                :to="`/matches/${team.next_match.match_id}`"
+              ><NuxtLink v-if="team.next_match" :to="`/matches/${team.next_match.match_id}`"
                 >vs. {{ team.next_match.opponent_name
                 }}<small
                   >{{
-                    new Date(team.next_match.scheduled_at).toLocaleString(
-                      "es-CL",
-                      {
-                        timeZone: "America/Santiago",
-                        day: "numeric",
-                        month: "short",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      },
-                    )
+                    new Date(team.next_match.scheduled_at).toLocaleString("es-CL", {
+                      timeZone: "America/Santiago",
+                      day: "numeric",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
                   }}
                   · Santiago</small
                 ></NuxtLink
@@ -352,9 +342,6 @@ h2 {
   }
 }
 
-
-
-
 .team-actions {
   display: flex;
   align-items: center;
@@ -549,24 +536,68 @@ h2 {
   }
 }
 
-.result-pill.win { background: var(--ui-surface, #2f4425); color: var(--ui-success, #bde897); }
-.result-pill.loss { background: var(--ui-surface, #442c29); color: var(--ui-danger, #edb5ad); }
-html[data-theme="light"] .result-pill.win { background: #dff1c4; color: #224c1b; }
-html[data-theme="light"] .result-pill.loss { background: #f8d8d0; color: #7b3127; }
-html[data-theme="light"] .result-pill.draw { background: #ebebeb; color: #3b3b3b; }
-html[data-theme="light"] .primary-action:hover:not(:disabled) { background: #d5e7c7; color: #244b16; }
-html[data-theme="light"] .primary-action:disabled { background: #e9eee6; color: #596452; border-color: #c5cec0; cursor: not-allowed; }
+.result-pill.win {
+  background: var(--ui-surface, #2f4425);
+  color: var(--ui-success, #bde897);
+}
+.result-pill.loss {
+  background: var(--ui-surface, #442c29);
+  color: var(--ui-danger, #edb5ad);
+}
+html[data-theme="light"] .result-pill.win {
+  background: #dff1c4;
+  color: #224c1b;
+}
+html[data-theme="light"] .result-pill.loss {
+  background: #f8d8d0;
+  color: #7b3127;
+}
+html[data-theme="light"] .result-pill.draw {
+  background: #ebebeb;
+  color: #3b3b3b;
+}
+html[data-theme="light"] .primary-action:hover:not(:disabled) {
+  background: #d5e7c7;
+  color: #244b16;
+}
+html[data-theme="light"] .primary-action:disabled {
+  background: #e9eee6;
+  color: #596452;
+  border-color: #c5cec0;
+  cursor: not-allowed;
+}
 
 @media (prefers-reduced-motion: no-preference) {
-  button, a, input { transition: color .18s ease, background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
-  button:not(:disabled):active, .primary-action:active { transform: translateY(1px); }
-  input:focus-visible { box-shadow: 0 0 0 3px var(--ui-success-soft, rgba(189, 237, 117, .12)); }
+  button,
+  a,
+  input {
+    transition:
+      color 0.18s ease,
+      background-color 0.18s ease,
+      border-color 0.18s ease,
+      box-shadow 0.18s ease,
+      transform 0.18s ease;
+  }
+  button:not(:disabled):active,
+  .primary-action:active {
+    transform: translateY(1px);
+  }
+  input:focus-visible {
+    box-shadow: 0 0 0 3px var(--ui-success-soft, rgba(189, 237, 117, 0.12));
+  }
 }
 @media (prefers-reduced-motion: no-preference) {
-.team-card { transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+  .team-card {
+    transition:
+      transform 0.2s ease,
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
 }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
-.team-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px var(--shadow); }
+  .team-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px var(--shadow);
+  }
 }
 </style>
-

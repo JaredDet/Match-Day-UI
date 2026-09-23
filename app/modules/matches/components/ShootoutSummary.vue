@@ -22,11 +22,7 @@ function cellLabel(side: number, index: number) {
   >
     <header>
       <span>{{
-        compact
-          ? "Penales"
-          : shootout.status === "finished"
-            ? "Tanda finalizada"
-            : "Tanda en curso"
+        compact ? "Penales" : shootout.status === "finished" ? "Tanda finalizada" : "Tanda en curso"
       }}</span
       ><strong>{{ rows[0]!.score }}–{{ rows[1]!.score }}</strong>
     </header>
@@ -40,23 +36,14 @@ function cellLabel(side: number, index: number) {
           :aria-label="cellLabel(side, index)"
           :title="cellLabel(side, index)"
         >
-          <CheckIcon
-            v-if="cell.state === 'scored'"
-            aria-hidden="true"
-          /><XMarkIcon
+          <CheckIcon v-if="cell.state === 'scored'" aria-hidden="true" /><XMarkIcon
             v-else-if="cell.state === 'missed'"
             aria-hidden="true"
           /><MinusIcon v-else-if="cell.state === 'unused'" aria-hidden="true" />
         </li>
       </ol>
     </div>
-    <p
-      v-if="
-        !compact &&
-        shootout.status === 'in_progress' &&
-        shootout.nextSide !== null
-      "
-    >
+    <p v-if="!compact && shootout.status === 'in_progress' && shootout.nextSide !== null">
       Próximo lanzamiento: <strong>{{ names[shootout.nextSide] }}</strong>
     </p>
     <p v-else-if="!compact && shootout.status === 'finished'">
@@ -66,11 +53,6 @@ function cellLabel(side: number, index: number) {
 </template>
 
 <style scoped>
-
-
-
-
-
 .penalty-summary {
   background: var(--ui-surface, #20241f);
   border: 1px solid var(--ui-border, #3c4638);
@@ -211,9 +193,22 @@ function cellLabel(side: number, index: number) {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  button, a, input { transition: color .18s ease, background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
-  button:not(:disabled):active, .primary-action:active { transform: translateY(1px); }
-  input:focus-visible { box-shadow: 0 0 0 3px var(--ui-success-soft, rgba(189, 237, 117, .12)); }
+  button,
+  a,
+  input {
+    transition:
+      color 0.18s ease,
+      background-color 0.18s ease,
+      border-color 0.18s ease,
+      box-shadow 0.18s ease,
+      transform 0.18s ease;
+  }
+  button:not(:disabled):active,
+  .primary-action:active {
+    transform: translateY(1px);
+  }
+  input:focus-visible {
+    box-shadow: 0 0 0 3px var(--ui-success-soft, rgba(189, 237, 117, 0.12));
+  }
 }
 </style>
-

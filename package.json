@@ -1,5 +1,6 @@
 {
   "name": "matchday-ui",
+  "packageManager": "pnpm@12.3.4",
   "type": "module",
   "private": true,
   "scripts": {
@@ -7,7 +8,14 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "prepare": "husky",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "lint-staged": {
+    "*.{js,mjs,cjs,ts,vue,json,css,scss,md,yml,yaml}": "prettier --write"
   },
   "dependencies": {
     "@headlessui/vue": "^1.7.23",
@@ -15,5 +23,10 @@
     "nuxt": "^4.5.2",
     "vue": "^3.5.42",
     "vue-router": "^5.3.1"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^17.5.1",
+    "prettier": "^3.9.8"
   }
 }

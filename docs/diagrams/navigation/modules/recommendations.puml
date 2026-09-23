@@ -1,0 +1,27 @@
+@startuml MatchdayRecommendationsNavigation
+title Navegación interna - Recomendaciones
+
+left to right direction
+skinparam linetype ortho
+
+rectangle "Para ti\n/for-you" as ForYou
+rectangle "Noticias para ti" as News
+rectangle "Partidos sugeridos" as Matches
+rectangle "Torneos relacionados" as Tournaments
+rectangle "Descubre algo nuevo" as Discovery
+rectangle "Detalle existente" as Detail
+
+ForYou --> News
+ForYou --> Matches
+ForYou --> Tournaments
+ForYou --> Discovery
+News --> Detail : /news/:id
+Matches --> Detail : /matches/:id
+Tournaments --> Detail : /tournaments/:id
+Discovery --> Detail : según el tipo
+
+note bottom of Detail
+  Al abrir el detalle comienza una visita
+  anónima y el heartbeat de tiempo activo.
+end note
+@enduml

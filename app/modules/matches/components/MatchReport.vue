@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import PlayerEvents from "~/modules/matches/components/PlayerEvents.vue"
-import ShootoutSummary from "~/modules/matches/components/ShootoutSummary.vue"
-import AnimatedHeroIcon from "~/components/AnimatedHeroIcon.vue"
+import PlayerEvents from "~/modules/matches/components/PlayerEvents.vue";
+import ShootoutSummary from "~/modules/matches/components/ShootoutSummary.vue";
+import AnimatedHeroIcon from "~/components/AnimatedHeroIcon.vue";
 
 import type { Shootout } from "~/modules/matches/utils/shootout";
 import {
@@ -41,22 +41,12 @@ const teams = computed(() => [props.match.home_team, props.match.away_team]);
 const hasShootout = computed(() => props.match.home_team.penalty_score != null);
 const timeline = computed(() => {
   if (props.match.status === "scheduled") return [];
-  const events: (ReportEvent & { order: number })[] = props.events.map(
-    (event) => ({
-      ...event,
-      order:
-        event.kind === "shootout"
-          ? 12100 + event.sequence!
-          : event.minute * 100 + (event.added || 0),
-    }),
-  );
-  const phase = (
-    id: string,
-    label: string,
-    minute: number,
-    order: number,
-    description?: string,
-  ) =>
+  const events: (ReportEvent & { order: number })[] = props.events.map((event) => ({
+    ...event,
+    order:
+      event.kind === "shootout" ? 12100 + event.sequence! : event.minute * 100 + (event.added || 0),
+  }));
+  const phase = (id: string, label: string, minute: number, order: number, description?: string) =>
     events.push({
       id,
       kind: "phase",
@@ -67,36 +57,22 @@ const timeline = computed(() => {
       description,
     });
   phase("start", "Inicio del partido", 0, -1);
-  if (
-    (props.match.current_minute ?? 0) >= 45 ||
-    props.match.status === "finished"
-  ) {
+  if ((props.match.current_minute ?? 0) >= 45 || props.match.status === "finished") {
     const score = teams.value
       .map((team) => team.goals.filter((goal) => goal.minute <= 45).length)
       .join(" – ");
     phase("halftime", "Medio tiempo", 45, 4599, score);
   }
-  if (
-    (props.match.current_minute ?? 0) > 45 ||
-    props.match.status === "finished"
-  )
+  if ((props.match.current_minute ?? 0) > 45 || props.match.status === "finished")
     phase("second-half", "Inicio del segundo tiempo", 46, 4600);
-  if (
-    (props.match.current_minute ?? 0) > 90 ||
-    props.match.status === "finished"
-  )
+  if ((props.match.current_minute ?? 0) > 90 || props.match.status === "finished")
     phase("extra-time", "Inicio de la prórroga", 90, 9099);
-  if (
-    (props.match.current_minute ?? 0) > 105 ||
-    props.match.status === "finished"
-  )
+  if ((props.match.current_minute ?? 0) > 105 || props.match.status === "finished")
     phase("extra-second", "Segundo tiempo de prórroga", 105, 10599);
-  if (hasShootout.value)
-    phase("shootout-start", "Inicio de la tanda de penales", 120, 12099);
+  if (hasShootout.value) phase("shootout-start", "Inicio de la tanda de penales", 120, 12099);
   if (props.match.status === "finished") {
     const winner =
-      (props.match.home_team.penalty_score ?? 0) >
-      (props.match.away_team.penalty_score ?? 0)
+      (props.match.home_team.penalty_score ?? 0) > (props.match.away_team.penalty_score ?? 0)
         ? props.match.home_team
         : props.match.away_team;
     phase(
@@ -104,31 +80,23 @@ const timeline = computed(() => {
       "Final del partido",
       120,
       13000,
-      hasShootout.value
-        ? `${winner.name} gana por penales`
-        : "Partido finalizado",
+      hasShootout.value ? `${winner.name} gana por penales` : "Partido finalizado",
     );
   }
-  return events.sort((a, b) =>
-    newestFirst.value ? b.order - a.order : a.order - b.order,
-  );
+  return events.sort((a, b) => (newestFirst.value ? b.order - a.order : a.order - b.order));
 });
 const rows = computed(() => {
   const count = (side: number, kind: string) =>
-    props.events.filter((event) => event.side === side && event.kind === kind)
-      .length;
+    props.events.filter((event) => event.side === side && event.kind === kind).length;
   const fieldGoals = (side: number) =>
-    teams.value[side]!.goals.filter((goal) => goal.goal_type !== "own_goal")
-      .length;
+    teams.value[side]!.goals.filter((goal) => goal.goal_type !== "own_goal").length;
   const onTarget = (side: number) =>
     props.events.filter(
       (event) =>
         event.side === side &&
-        ((event.kind === "shot" && event.label === "Tiro al arco") ||
-          event.kind === "penalty"),
+        ((event.kind === "shot" && event.label === "Tiro al arco") || event.kind === "penalty"),
     ).length + fieldGoals(side);
-  const shots = (side: number) =>
-    count(side, "shot") + count(side, "penalty") + fieldGoals(side);
+  const shots = (side: number) => count(side, "shot") + count(side, "penalty") + fieldGoals(side);
   return [
     { label: "Posesión", values: [54, 46], percent: true },
     { label: "Tiros totales", values: [shots(0), shots(1)] },
@@ -170,10 +138,7 @@ function initials(name: string) {
     .slice(0, 2)
     .join("");
 }
-function winsStatistic(
-  row: { values: number[]; lowerWins?: boolean },
-  side: number,
-) {
+function winsStatistic(row: { values: number[]; lowerWins?: boolean }, side: number) {
   const own = row.values[side]!,
     other = row.values[1 - side]!;
   return row.lowerWins ? own < other : own > other;
@@ -255,13 +220,14 @@ function eventIcon(kind: string, outcome?: string) {
         />
       </button>
     </div>
-    <ShootoutSummary v-if="match.shootout" :shootout="match.shootout" :home="match.home_team.name" :away="match.away_team.name" />
+    <ShootoutSummary
+      v-if="match.shootout"
+      :shootout="match.shootout"
+      :home="match.home_team.name"
+      :away="match.away_team.name"
+    />
     <ol class="timeline">
-      <li
-        v-for="event in timeline"
-        :key="event.id"
-        :class="{ milestone: event.kind === 'phase' }"
-      >
+      <li v-for="event in timeline" :key="event.id" :class="{ milestone: event.kind === 'phase' }">
         <div v-if="event.kind === 'phase'" class="phase">
           <div class="phase-icon-wrap">
             <AnimatedHeroIcon
@@ -337,9 +303,7 @@ function eventIcon(kind: string, outcome?: string) {
                   <h4>{{ event.incoming }}</h4>
                   <p>{{ teams[event.side]!.name }}</p>
                 </div>
-                <span class="player-token incoming-token">{{
-                  initials(event.incoming!)
-                }}</span>
+                <span class="player-token incoming-token">{{ initials(event.incoming!) }}</span>
               </div>
               <div class="event-player">
                 <div>
@@ -355,9 +319,7 @@ function eventIcon(kind: string, outcome?: string) {
                   <h4>{{ event.player }}</h4>
                   <p>{{ teams[event.side]!.name }}</p>
                 </div>
-                <span class="player-token outgoing-token">{{
-                  initials(event.player!)
-                }}</span>
+                <span class="player-token outgoing-token">{{ initials(event.player!) }}</span>
               </div></template
             >
             <div v-else class="event-player">
@@ -371,12 +333,14 @@ function eventIcon(kind: string, outcome?: string) {
                   {{ event.description }}
                 </p>
               </div>
-              <span v-if="event.player" class="player-token">{{
-                initials(event.player)
-              }}</span>
+              <span v-if="event.player" class="player-token">{{ initials(event.player) }}</span>
             </div>
-            <div v-if="event.kind === 'goal' && event.assistPlayer" class="goal-assistance"><span>Asistencia</span><strong>{{ event.assistPlayer }}</strong></div>
-            <div v-if="event.goalkeeper" class="goal-assistance"><span>Atajada</span><strong>{{ event.goalkeeper }}</strong></div>
+            <div v-if="event.kind === 'goal' && event.assistPlayer" class="goal-assistance">
+              <span>Asistencia</span><strong>{{ event.assistPlayer }}</strong>
+            </div>
+            <div v-if="event.goalkeeper" class="goal-assistance">
+              <span>Atajada</span><strong>{{ event.goalkeeper }}</strong>
+            </div>
             <p v-if="event.description && event.kind === 'substitution'" class="event-description">
               {{ event.description }}
             </p>
@@ -388,13 +352,9 @@ function eventIcon(kind: string, outcome?: string) {
 </template>
 
 <style scoped>
-
 button:hover {
   color: var(--accent);
 }
-
-
-
 
 .report-empty {
   text-align: center;
@@ -537,8 +497,12 @@ button:hover {
   border-left-width: 3px;
   border-left-color: var(--ui-border);
 }
-.event-card.home-event { border-left-color: var(--ui-success); }
-.event-card.away-event { border-left-color: var(--ui-info); }
+.event-card.home-event {
+  border-left-color: var(--ui-success);
+}
+.event-card.away-event {
+  border-left-color: var(--ui-info);
+}
 .event-card header {
   padding: 13px 16px;
   border-bottom: 1px solid var(--ui-border, #44484c);
@@ -807,16 +771,51 @@ button:hover {
   min-width: 36px;
 }
 
-.goal-assistance{display:flex;align-items:center;gap:12px;margin-top:15px;padding-top:12px;border-top:1px solid var(--ui-border, #ffffff0a)}.goal-assistance>span{font-size:10px;color:var(--ui-muted, #939b9c)}.goal-assistance>strong{font-size:11px;font-weight:500;color:var(--ui-text, #c9d4d0)}
-html[data-theme="light"] .home { background: #e1e7ec; }
-html[data-theme="light"] .away { background: #d5e8f6; }
-html[data-theme="light"] .goal-event.away-event header { background: var(--ui-info-soft); border-color: var(--ui-border); }
-
+.goal-assistance {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 15px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ui-border, #ffffff0a);
+}
+.goal-assistance > span {
+  font-size: 10px;
+  color: var(--ui-muted, #939b9c);
+}
+.goal-assistance > strong {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ui-text, #c9d4d0);
+}
+html[data-theme="light"] .home {
+  background: #e1e7ec;
+}
+html[data-theme="light"] .away {
+  background: #d5e8f6;
+}
+html[data-theme="light"] .goal-event.away-event header {
+  background: var(--ui-info-soft);
+  border-color: var(--ui-border);
+}
 
 @media (prefers-reduced-motion: no-preference) {
-  button, a, input { transition: color .18s ease, background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
-  button:not(:disabled):active, .primary-action:active { transform: translateY(1px); }
-  input:focus-visible { box-shadow: 0 0 0 3px var(--ui-success-soft, rgba(189, 237, 117, .12)); }
+  button,
+  a,
+  input {
+    transition:
+      color 0.18s ease,
+      background-color 0.18s ease,
+      border-color 0.18s ease,
+      box-shadow 0.18s ease,
+      transform 0.18s ease;
+  }
+  button:not(:disabled):active,
+  .primary-action:active {
+    transform: translateY(1px);
+  }
+  input:focus-visible {
+    box-shadow: 0 0 0 3px var(--ui-success-soft, rgba(189, 237, 117, 0.12));
+  }
 }
 </style>
-

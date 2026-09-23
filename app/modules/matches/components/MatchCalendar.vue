@@ -49,12 +49,8 @@ const months = Array.from({ length: 12 }, (_, i) =>
   new Date(2026, i, 1).toLocaleDateString("es", { month: "long" }),
 );
 const weekdays = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
-const days = computed(() =>
-  calendarMonthDays(cursor.value.getFullYear(), cursor.value.getMonth()),
-);
-const years = computed(() =>
-  Array.from({ length: 12 }, (_, i) => yearStart.value + i),
-);
+const days = computed(() => calendarMonthDays(cursor.value.getFullYear(), cursor.value.getMonth()));
+const years = computed(() => Array.from({ length: 12 }, (_, i) => yearStart.value + i));
 const dateLabel = computed(() =>
   new Date(`${props.modelValue}T12:00:00`).toLocaleDateString("es-CL", {
     day: "numeric",
@@ -145,9 +141,7 @@ async function navigateDay(event: KeyboardEvent, key: string) {
   focusDate.value = calendarDateKey(date);
   cursor.value = new Date(date.getFullYear(), date.getMonth(), 1, 12);
   await nextTick();
-  panel.value
-    ?.querySelector<HTMLButtonElement>(`[data-date="${focusDate.value}"]`)
-    ?.focus();
+  panel.value?.querySelector<HTMLButtonElement>(`[data-date="${focusDate.value}"]`)?.focus();
 }
 </script>
 <template>
@@ -158,8 +152,7 @@ async function navigateDay(event: KeyboardEvent, key: string) {
           <button class="calendar-trigger">
             <CalendarDaysIcon aria-hidden="true" />
             <span
-              ><small>Elige una fecha</small
-              ><strong>{{ dateLabel }}</strong></span
+              ><small>Elige una fecha</small><strong>{{ dateLabel }}</strong></span
             >
             <ChevronDownIcon class="calendar-caret" aria-hidden="true" />
           </button>
@@ -192,9 +185,7 @@ async function navigateDay(event: KeyboardEvent, key: string) {
                     >
                       {{ months[cursor.getMonth()] }}</button
                     ><button
-                      :aria-label="
-                        view === 'years' ? 'Volver a elegir mes' : 'Elegir año'
-                      "
+                      :aria-label="view === 'years' ? 'Volver a elegir mes' : 'Elegir año'"
                       @click="
                         view = view === 'years' ? 'months' : 'years';
                         yearStart = cursor.getFullYear() - 5;
@@ -202,9 +193,7 @@ async function navigateDay(event: KeyboardEvent, key: string) {
                       "
                     >
                       {{
-                        view === "years"
-                          ? `${yearStart}–${yearStart + 11}`
-                          : cursor.getFullYear()
+                        view === "years" ? `${yearStart}–${yearStart + 11}` : cursor.getFullYear()
                       }}
                     </button>
                   </div>
@@ -223,15 +212,9 @@ async function navigateDay(event: KeyboardEvent, key: string) {
                 </header>
                 <div v-if="view === 'days'">
                   <div class="calendar-weekdays">
-                    <span v-for="weekday in weekdays" :key="weekday">{{
-                      weekday
-                    }}</span>
+                    <span v-for="weekday in weekdays" :key="weekday">{{ weekday }}</span>
                   </div>
-                  <div
-                    class="calendar-grid"
-                    role="group"
-                    aria-label="Días del mes"
-                  >
+                  <div class="calendar-grid" role="group" aria-label="Días del mes">
                     <div
                       v-for="(day, index) in days"
                       :key="day.key"
@@ -252,9 +235,7 @@ async function navigateDay(event: KeyboardEvent, key: string) {
                         :aria-pressed="day.key === modelValue"
                         :aria-current="day.key === today ? 'date' : undefined"
                         :aria-describedby="
-                          hovered === day.key
-                            ? `calendar-preview-${day.key}`
-                            : undefined
+                          hovered === day.key ? `calendar-preview-${day.key}` : undefined
                         "
                         :tabindex="day.key === focusDate ? 0 : -1"
                         @focus="
@@ -269,9 +250,7 @@ async function navigateDay(event: KeyboardEvent, key: string) {
                         ><template v-if="dayMatches(day.key).length"
                           ><strong>{{ dayMatches(day.key).length }}</strong
                           ><small>{{
-                            dayMatches(day.key).length === 1
-                              ? "partido"
-                              : "partidos"
+                            dayMatches(day.key).length === 1 ? "partido" : "partidos"
                           }}</small></template
                         >
                       </button>
@@ -290,29 +269,22 @@ async function navigateDay(event: KeyboardEvent, key: string) {
                         }"
                       >
                         <strong>{{
-                          new Date(`${day.key}T12:00:00`).toLocaleDateString(
-                            "es",
-                            { day: "numeric", month: "long" },
-                          )
+                          new Date(`${day.key}T12:00:00`).toLocaleDateString("es", {
+                            day: "numeric",
+                            month: "long",
+                          })
                         }}</strong>
                         <ul v-if="dayMatches(day.key).length">
-                          <li
-                            v-for="match in dayMatches(day.key).slice(0, 3)"
-                            :key="match.id"
-                          >
+                          <li v-for="match in dayMatches(day.key).slice(0, 3)" :key="match.id">
                             <time>{{ time(match.scheduled_at) }}</time
                             ><span
-                              >{{ match.home_team.name
-                              }}<span class="calendar-vs"> vs. </span
+                              >{{ match.home_team.name }}<span class="calendar-vs"> vs. </span
                               >{{ match.away_team.name }}</span
                             >
                           </li>
                         </ul>
                         <p v-else>No hay partidos programados</p>
-                        <p
-                          v-if="dayMatches(day.key).length > 3"
-                          class="calendar-more"
-                        >
+                        <p v-if="dayMatches(day.key).length > 3" class="calendar-more">
                           +{{ dayMatches(day.key).length - 3 }} más
                         </p>
                       </div>
@@ -333,11 +305,7 @@ async function navigateDay(event: KeyboardEvent, key: string) {
                     {{ month }}
                   </button>
                 </div>
-                <div
-                  v-else
-                  class="calendar-choices"
-                  aria-label="Seleccionar año"
-                >
+                <div v-else class="calendar-choices" aria-label="Seleccionar año">
                   <button
                     v-for="year in years"
                     :key="year"
@@ -348,8 +316,7 @@ async function navigateDay(event: KeyboardEvent, key: string) {
                   </button>
                 </div>
                 <footer class="calendar-bottom">
-                  <span>Horario de Santiago</span
-                  ><button @click="closePanel()">Ver jornada</button>
+                  <span>Horario de Santiago</span><button @click="closePanel()">Ver jornada</button>
                 </footer>
               </div>
             </div>
@@ -358,11 +325,7 @@ async function navigateDay(event: KeyboardEvent, key: string) {
       </Popover>
     </div>
     <nav class="week-navigation" aria-label="Jornadas de la semana">
-      <button
-        class="week-arrow"
-        aria-label="Semana anterior"
-        @click="moveWeek(-1)"
-      >
+      <button class="week-arrow" aria-label="Semana anterior" @click="moveWeek(-1)">
         <ChevronLeftIcon aria-hidden="true" />
       </button>
       <div class="week-days">
@@ -381,11 +344,7 @@ async function navigateDay(event: KeyboardEvent, key: string) {
           ><i v-if="dayMatches(day.key).length" />
         </button>
       </div>
-      <button
-        class="week-arrow"
-        aria-label="Semana siguiente"
-        @click="moveWeek(1)"
-      >
+      <button class="week-arrow" aria-label="Semana siguiente" @click="moveWeek(1)">
         <ChevronRightIcon aria-hidden="true" />
       </button>
     </nav>
@@ -494,9 +453,6 @@ footer > span:last-child {
     margin: 0;
   }
 }
-
-
-
 
 .calendar-toolbar {
   display: flex;
@@ -915,16 +871,38 @@ footer > span:last-child {
 html[data-theme="light"] .week-day.selected,
 html[data-theme="light"] .week-day.selected span,
 html[data-theme="light"] .day.selected,
-html[data-theme="light"] .day.selected span { color: var(--on-accent) !important; background: var(--accent-fill) !important; }
-html[data-theme="light"] .calendar-day.selected { background: #35651d; color: #fff; }
-html[data-theme="light"] .calendar-day.selected.today:after { background: #fff; }
-html[data-theme="light"] .calendar-day.outside { color: #677365; }
-
+html[data-theme="light"] .day.selected span {
+  color: var(--on-accent) !important;
+  background: var(--accent-fill) !important;
+}
+html[data-theme="light"] .calendar-day.selected {
+  background: #35651d;
+  color: #fff;
+}
+html[data-theme="light"] .calendar-day.selected.today:after {
+  background: #fff;
+}
+html[data-theme="light"] .calendar-day.outside {
+  color: #677365;
+}
 
 @media (prefers-reduced-motion: no-preference) {
-  button, a, input { transition: color .18s ease, background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
-  button:not(:disabled):active, .primary-action:active { transform: translateY(1px); }
-  input:focus-visible { box-shadow: 0 0 0 3px var(--ui-success-soft, rgba(189, 237, 117, .12)); }
+  button,
+  a,
+  input {
+    transition:
+      color 0.18s ease,
+      background-color 0.18s ease,
+      border-color 0.18s ease,
+      box-shadow 0.18s ease,
+      transform 0.18s ease;
+  }
+  button:not(:disabled):active,
+  .primary-action:active {
+    transform: translateY(1px);
+  }
+  input:focus-visible {
+    box-shadow: 0 0 0 3px var(--ui-success-soft, rgba(189, 237, 117, 0.12));
+  }
 }
 </style>
-

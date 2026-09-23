@@ -1,116 +1,210 @@
-import { useDemoMatches } from '~/modules/matches/composables/useDemoMatches'
-import { useDemoTeams } from '~/modules/teams/composables/useDemoTeams'
-import { useTeamProfiles } from '~/modules/teams/composables/useTeamProfiles'
-import type { Match, Period, Team } from '~/modules/matches/utils/matches'
-import type { MatchOperation, Side, EventKind } from '~/modules/matches/types/operations'
+﻿import { useRepositories } from "~/core/api/repository-context";
+import { useMatches } from "~/modules/matches/composables/useMatches";
+import type {
+  EventKind,
+  MatchEvent,
+  MatchOperation,
+  Side,
+} from "~/modules/matches/types/operations";
+import type { Match, Period } from "~/modules/matches/utils/matches";
+import type { TeamPlayer } from "~/modules/teams/types/teams";
+
+type ApiMatch = Match & {
+  events?: Array<Record<string, unknown>>;
+  home_team: Match["home_team"] & { lineup?: Array<Record<string, unknown>> };
+  away_team: Match["away_team"] & { lineup?: Array<Record<string, unknown>> };
+};
+
 export function useMatchOperations() {
-  const { matches } = useDemoMatches(), { teamById } = useDemoTeams(), profiles = useTeamProfiles()
-  const operations = useState<Record<string, MatchOperation>>('demo-match-operations', () => ({}))
-  const get = (id: string) => { const m = matches.value.find(m => m.id === id); if (!m) throw new Error('Partido no encontrado.'); return m }
-  const roster = (teamId: string) => profiles.value.details.find(team => team.id === teamId)?.players ?? []
-  function create(home: string, away: string, date: string) {
-    if (!teamById(home) || !teamById(away) || home === away) throw new Error('Selecciona dos equipos distintos.')
-    if (!Number.isFinite(Date.parse(date))) throw new Error('Selecciona una fecha válida.')
-    const id = `match-${crypto.randomUUID()}`
-    const makeTeam = (teamId: string, side: Side): Team => ({ id: teamId, name: teamById(teamId)!.name, team_side: side, score: 0, formation: null, positions: [], goals: [] })
-    matches.value.push({ id, status: 'scheduled', scheduled_at: new Date(date).toISOString(), current_period: null, current_minute: null, current_added_minute: 0, clock: { period: null, status: 'not_started', minute: null, second: 0, added_minute: 0, announced_added_minutes: 0 }, home_team: makeTeam(home, 'home'), away_team: makeTeam(away, 'away') })
-    operations.value[id] = { lineups: { home: [], away: [] }, events: [] }
-    return id
+  const repositories = useRepositories(),
+    catalog = useMatches();
+  const details = useState<Record<string, ApiMatch>>("managed-match-details", () => ({}));
+  const rosters = useState<Record<string, TeamPlayer[]>>("managed-team-rosters", () => ({}));
+  const matches = computed(() =>
+    catalog.matches.value.map((item) => details.value[item.id] ?? item),
+  );
+  const operations = computed<Record<string, MatchOperation>>(() =>
+    Object.fromEntries(
+      Object.entries(details.value).map(([id, match]) => {
+        const lineup = (side: Side) =>
+          (match[`${side}_team`].lineup ?? [])
+            .filter((player) => player.role === "starter")
+            .map((player) => String(player.player_id));
+        const events: MatchEvent[] = (match.events ?? []).flatMap((event) => {
+          const type = String(event.type ?? "");
+          const kind: EventKind | null =
+            type === "goal"
+              ? event.goal_type === "penalty"
+                ? "penalty_goal"
+                : event.goal_type === "own_goal"
+                  ? "own_goal"
+                  : "goal"
+              : type === "yellow_card"
+                ? "yellow_card"
+                : type === "red_card"
+                  ? "red_card"
+                  : type === "substitution"
+                    ? "substitution"
+                    : null;
+          return kind
+            ? [
+                {
+                  id: String(event.id),
+                  kind,
+                  side: event.team_side as Side,
+                  player: String(event.player_id ?? event.player_out_id),
+                  replacement: event.player_in_id ? String(event.player_in_id) : undefined,
+                  minute: Number(event.minute ?? 0),
+                  cancelled: false,
+                },
+              ]
+            : [];
+        });
+        return [id, { lineups: { home: lineup("home"), away: lineup("away") }, events }];
+      }),
+    ),
+  );
+  const roster = (teamId: string) => rosters.value[teamId] ?? [];
+  async function refresh(id?: string) {
+    await catalog.refresh();
+    if (id) details.value[id] = (await repositories.matches.get(id)) as ApiMatch;
   }
-  function prepare(id: string) {
-    const match = get(id)
-    if (!operations.value[id]) { if (match.status !== 'scheduled') throw new Error('Los partidos históricos de ejemplo son de solo consulta. Crea un partido para operarlo.'); operations.value[id] = { lineups: { home: [], away: [] }, events: [] } }
-    return operations.value[id]!
+  async function prepare(id: string) {
+    const match = (await repositories.matches.get(id)) as ApiMatch;
+    details.value[id] = match;
+    await Promise.all(
+      (["home", "away"] as Side[]).map(async (side) => {
+        const teamId = match[`${side}_team`].id;
+        if (!rosters.value[teamId])
+          rosters.value[teamId] = (await repositories.teams.get(teamId)).players;
+      }),
+    );
+    return operations.value[id]!;
   }
-  function reschedule(id: string, date: string) { const m = get(id); if (m.status !== 'scheduled' || !Number.isFinite(Date.parse(date))) throw new Error('Solo se puede reprogramar un partido pendiente con una fecha válida.'); m.scheduled_at = new Date(date).toISOString() }
-  function lineup(id: string, side: Side, players: string[]) {
-    const m = get(id), state = prepare(id)
-    if (m.status !== 'scheduled') throw new Error('La alineación queda bloqueada al comenzar.')
-    if (players.length !== 11 || new Set(players).size !== 11 || players.some(p => !roster(m[`${side}_team`].id).some(player => player.id === p))) throw new Error('Selecciona once titulares distintos de la plantilla.')
-    state.lineups[side] = [...players]
+  async function create(home: string, away: string, date: string) {
+    if (!home || !away || home === away) throw new Error("Selecciona dos equipos distintos.");
+    if (!Number.isFinite(Date.parse(date))) throw new Error("Selecciona una fecha válida.");
+    const id = await repositories.matches.create(home, away, new Date(date).toISOString());
+    await refresh(id);
+    return id;
+  }
+  async function lineup(id: string, side: Side, players: string[]) {
+    if (players.length !== 11 || new Set(players).size !== 11)
+      throw new Error("Selecciona once titulares distintos.");
+    const all = roster(details.value[id]![`${side}_team`].id);
+    const shirt = (player: TeamPlayer, index: number) => player.preferred_shirt_number ?? index + 1;
+    await repositories.matches.command(id, `lineups/${side}/`, "PUT", {
+      formation: "4-3-3",
+      players: players.map((playerId, index) => ({
+        player_id: playerId,
+        shirt_number: shirt(
+          all.find((player) => player.id === playerId)!,
+          index,
+        ),
+      })),
+      substitutes: all
+        .filter((player) => !players.includes(player.id))
+        .map((player, index) => ({
+          player_id: player.id,
+          shirt_number: shirt(player, players.length + index),
+        })),
+    });
+    await refresh(id);
   }
   function activePlayers(id: string, side: Side) {
-    const state = operations.value[id]; if (!state) return []
-    const active = new Set(state.lineups[side])
-    const yellows: Record<string, number> = {}
-    for (const e of state.events.filter(e => !e.cancelled && e.side === side)) {
-      if (e.kind === 'substitution') { active.delete(e.player); active.add(e.replacement!) }
-      if (e.kind === 'yellow_card') { yellows[e.player] = (yellows[e.player] ?? 0) + 1; if (yellows[e.player] >= 2) active.delete(e.player) }
-      if (e.kind === 'red_card') active.delete(e.player)
+    return (details.value[id]?.[`${side}_team`].lineup ?? [])
+      .filter((player) => player.is_on_field && !player.is_sent_off)
+      .map((player) => String(player.player_id));
+  }
+  async function period(id: string, action: "next" | "extra" | "finish", _minute?: number) {
+    const match = details.value[id] ?? ((await repositories.matches.get(id)) as ApiMatch);
+    if (action === "finish") await repositories.matches.command(id, "finish/", "POST");
+    else if (action === "extra")
+      await repositories.matches.command(id, "periods/start/", "POST", {
+        period: "extra_time_first_half",
+      });
+    else if (match.status === "scheduled") await repositories.matches.command(id, "start/", "POST");
+    else if (match.clock.status === "running")
+      await repositories.matches.command(id, "periods/end/", "POST", {
+        expected_period: match.current_period,
+      });
+    else {
+      const next: Partial<Record<Period, Period>> = {
+        first_half: "second_half",
+        halftime: "second_half",
+        extra_time_first_half: "extra_time_second_half",
+        extra_time_halftime: "extra_time_second_half",
+      };
+      const nextPeriod = next[match.current_period!];
+      if (!nextPeriod) throw new Error("Finaliza el partido o inicia la prórroga.");
+      await repositories.matches.command(id, "periods/start/", "POST", { period: nextPeriod });
     }
-    return [...active]
+    await refresh(id);
   }
-  function period(id: string, action: 'next' | 'extra' | 'finish', minute?: number) {
-    const m = get(id), state = prepare(id)
-    if (m.status === 'finished' || m.shootout) throw new Error('El partido ya no permite cambiar periodos.')
-    if (action === 'finish') {
-      if (!['second_half','extra_time_second_half'].includes(m.current_period ?? '') || m.clock.status !== 'closed') throw new Error('Cierra el último periodo antes de finalizar.')
-      m.status = 'finished'; return
-    }
-    if (action === 'extra') {
-      if (m.current_period !== 'second_half' || m.clock.status !== 'closed' || m.home_team.score !== m.away_team.score) throw new Error('La prórroga requiere el segundo tiempo cerrado y un empate.')
-      m.current_period = 'extra_time_first_half'; m.current_minute = 90
-    } else if (m.status === 'scheduled') {
-      if (state.lineups.home.length !== 11 || state.lineups.away.length !== 11) throw new Error('Guarda once titulares por equipo antes de comenzar.')
-      m.status = 'live'; m.current_period = 'first_half'; m.current_minute = 0
-    } else {
-      const next: Partial<Record<Period, [Period, number]>> = { first_half: ['halftime',45], halftime: ['second_half',45], extra_time_first_half: ['extra_time_halftime',105], extra_time_halftime: ['extra_time_second_half',105] }
-      if (m.clock.status === 'running') {
-        const end = ({ first_half:45, second_half:90, extra_time_first_half:105, extra_time_second_half:120 } as Record<string, number>)[m.current_period!]
-        if (minute == null || !Number.isInteger(minute) || minute < end! || minute < (m.current_minute ?? 0)) throw new Error(`Indica el minuto de cierre, al menos ${end}.`)
-        m.current_minute = minute; m.clock.minute = minute; m.clock.status = 'closed'; return
-      }
-      const transition = next[m.current_period!]; if (!transition) throw new Error('Finaliza el partido, inicia la prórroga o una tanda si hay empate.')
-      ;[m.current_period, m.current_minute] = transition
-    }
-    m.clock.period = m.current_period; m.clock.minute = m.current_minute; m.clock.status = m.current_period?.includes('halftime') ? 'closed' : 'running'
+  async function event(
+    id: string,
+    _side: Side,
+    kind: EventKind,
+    player: string,
+    minute: number,
+    replacement?: string,
+  ) {
+    if (["goal", "penalty_goal", "own_goal"].includes(kind))
+      await repositories.matches.command(id, "goals/", "POST", {
+        player_id: player,
+        goal_type:
+          kind === "penalty_goal" ? "penalty" : kind === "own_goal" ? "own_goal" : "regular",
+        minute,
+      });
+    else if (["yellow_card", "red_card"].includes(kind))
+      await repositories.matches.command(id, "cards/", "POST", {
+        player_id: player,
+        card_type: kind === "yellow_card" ? "yellow" : "red",
+        minute,
+      });
+    else
+      await repositories.matches.command(id, "substitutions/", "POST", {
+        player_out_id: player,
+        player_in_id: replacement,
+        reason: "tactical",
+        minute,
+      });
+    await refresh(id);
   }
-  function event(id: string, side: Side, kind: EventKind, player: string, minute: number, replacement?: string) {
-    const m = get(id), state = prepare(id)
-    if (m.status !== 'live' || m.clock.status !== 'running' || m.shootout) throw new Error('Los eventos requieren un periodo en juego.')
-    const start = ({ first_half:0, second_half:45, extra_time_first_half:90, extra_time_second_half:105 } as Record<string, number>)[m.current_period!]!
-    const end = ({ first_half:45, second_half:90, extra_time_first_half:105, extra_time_second_half:120 } as Record<string, number>)[m.current_period!]!
-    if (!Number.isInteger(minute) || minute < Math.max(start, m.current_minute ?? 0) || minute > end + 30) throw new Error('El minuto debe corresponder al periodo y no retroceder respecto del último evento.')
-    if (!activePlayers(id, side).includes(player)) throw new Error('Selecciona un jugador que esté en el campo.')
-    if (kind === 'substitution') {
-      const used = new Set([...state.lineups[side], ...state.events.filter(e => !e.cancelled && e.side === side && e.replacement).map(e => e.replacement!)])
-      if (!replacement || used.has(replacement) || !roster(m[`${side}_team`].id).some(p => p.id === replacement)) throw new Error('Selecciona un suplente que no haya participado.')
-      if (state.events.filter(e => !e.cancelled && e.side === side && e.kind === 'substitution').length >= 5) throw new Error('Se alcanzó el máximo de cinco sustituciones de esta demo.')
-    }
-    state.events.push({ id: crypto.randomUUID(), kind, side, player, replacement, minute, cancelled: false })
-    m.current_minute = minute; m.clock.minute = minute; updateScore(id)
+  async function cancel(id: string, eventId: string) {
+    const item = operations.value[id]?.events.find((event) => event.id === eventId);
+    if (!item) throw new Error("Evento no encontrado.");
+    const path = ["goal", "penalty_goal", "own_goal"].includes(item.kind)
+      ? `goals/${eventId}/disallow/`
+      : `cards/${eventId}/rescind/`;
+    await repositories.matches.command(id, path, "POST");
+    await refresh(id);
   }
-  function updateScore(id: string) {
-    const m = get(id), state = operations.value[id]!
-    for (const side of ['home','away'] as const) {
-      const goals = state.events.filter(e => !e.cancelled && ['goal','penalty_goal','own_goal'].includes(e.kind) && (e.kind === 'own_goal' ? e.side !== side : e.side === side))
-      m[`${side}_team`].score = goals.length
-      m[`${side}_team`].goals = goals.map(e => ({ player_name: roster(m[`${e.side}_team`].id).find(p => p.id === e.player)?.name ?? '', goal_type: e.kind === 'own_goal' ? 'own_goal' : e.kind === 'penalty_goal' ? 'penalty' : 'regular', minute: e.minute }))
-    }
+  async function shootout(id: string) {
+    await repositories.matches.command(id, "penalty-shootout/start/", "POST", {
+      starting_team_side: "home",
+    });
+    await refresh(id);
   }
-  function cancel(id: string, eventId: string) {
-    const m = get(id), state = prepare(id), e = state.events.find(e => e.id === eventId)
-    if (m.status !== 'live' || m.shootout || !e || e.cancelled || e.kind === 'substitution') throw new Error('Solo se pueden anular goles o tarjetas antes de finalizar o iniciar una tanda.')
-    e.cancelled = true; updateScore(id)
+  async function kick(id: string, player: string, scored: boolean) {
+    await repositories.matches.command(id, "penalty-shootout/kicks/", "POST", {
+      player_id: player,
+      outcome: scored ? "scored" : "missed",
+    });
+    await refresh(id);
   }
-  function shootout(id: string) {
-    const m = get(id)
-    if (m.status !== 'live' || m.shootout || m.clock.status !== 'closed' || !['second_half','extra_time_second_half'].includes(m.current_period ?? '') || m.home_team.score !== m.away_team.score) throw new Error('La tanda requiere un empate al cerrar el segundo tiempo o la prórroga.')
-    m.shootout = { status:'in_progress', nextSide:0, kicks:[] }; m.home_team.penalty_score = 0; m.away_team.penalty_score = 0
-  }
-  function kick(id: string, player: string, scored: boolean) {
-    const m = get(id), s = m.shootout
-    if (!s || s.status === 'finished' || s.nextSide === null) throw new Error('No hay una tanda en curso.')
-    const side = s.nextSide === 0 ? 'home' : 'away', eligible = activePlayers(id, side)
-    if (!eligible.includes(player)) throw new Error('El lanzador debe estar en el campo.')
-    const own = s.kicks.filter(k => k.side === s.nextSide), cycle = own.slice(Math.floor(own.length / eligible.length) * eligible.length)
-    const name = roster(m[`${side}_team`].id).find(p => p.id === player)!.name
-    if (cycle.some(k => k.player === name)) throw new Error('Deben lanzar todos los jugadores habilitados antes de repetir.')
-    s.kicks.push({ side:s.nextSide, player:name, outcome:scored ? 'scored' : 'missed', sequence:s.kicks.length+1 })
-    const shots = [0,1].map(side => s.kicks.filter(k => k.side === side)), scores = shots.map(shots => shots.filter(k => k.outcome === 'scored').length)
-    m.home_team.penalty_score = scores[0]!; m.away_team.penalty_score = scores[1]!
-    const decided = (shots[0]!.length <= 5 && shots[1]!.length <= 5) ? scores[0]! > scores[1]! + Math.max(0,5-shots[1]!.length) || scores[1]! > scores[0]! + Math.max(0,5-shots[0]!.length) : shots[0]!.length === shots[1]!.length && scores[0] !== scores[1]
-    if (decided) { s.status = 'finished'; s.nextSide = null; m.status = 'finished' } else s.nextSide = s.nextSide === 0 ? 1 : 0
-  }
-  return { matches, operations, roster, create, prepare, reschedule, lineup, activePlayers, period, event, cancel, shootout, kick }
+  return {
+    matches,
+    operations,
+    roster,
+    create,
+    prepare,
+    lineup,
+    activePlayers,
+    period,
+    event,
+    cancel,
+    shootout,
+    kick,
+  };
 }

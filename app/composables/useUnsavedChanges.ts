@@ -10,8 +10,6 @@ export function useUnsavedChanges(
     event.returnValue = "";
   };
   onMounted(() => window.addEventListener("beforeunload", beforeUnload));
-  onBeforeUnmount(() =>
-    window.removeEventListener("beforeunload", beforeUnload),
-  );
+  onBeforeUnmount(() => window.removeEventListener("beforeunload", beforeUnload));
   onBeforeRouteLeave(() => !dirty.value || window.confirm(message));
 }

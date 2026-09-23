@@ -1,29 +1,26 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import OperatedMatchReport from "~/modules/matches/components/OperatedMatchReport.vue";
-import { useMatchOperations } from "~/modules/matches/composables/useMatchOperations";
-const { operations } = useMatchOperations();
+import type { MatchOperation } from "~/modules/matches/types/operations";
+import { useRepositories } from "~/core/api/repository-context";
+const operations = useState<Record<string, MatchOperation>>("api-match-operations", () => ({}));
 import MatchDetail from "~/modules/matches/components/MatchDetail.vue";
 import ShootoutSummary from "~/modules/matches/components/ShootoutSummary.vue";
 import AnimatedHeroIcon from "~/components/AnimatedHeroIcon.vue";
-import { useDemoMatches } from "~/modules/matches/composables/useDemoMatches";
 
 import { ArrowLeftIcon } from "@heroicons/vue/24/outline";
-import {
-  matchState,
-  goalMinute,
-  goalLabel,
-  time,
-} from "~/modules/matches/utils/matches";
+import { matchState, goalMinute, goalLabel, time } from "~/modules/matches/utils/matches";
 import { initials, teamColor } from "~/modules/teams/utils/identity";
 const route = useRoute();
-const { matches } = useDemoMatches();
-const match = matches.value.find((item) => item.id === route.params.id);
-if (!match)
+const repository = useRepositories().matches;
+const { data: match } = await useAsyncData(`match-detail-${route.params.id}`, () =>
+  repository.get(String(route.params.id)),
+);
+if (!match.value)
   throw createError({
     statusCode: 404,
     statusMessage: "Partido no encontrado",
   });
-const matchTitle = `${match.home_team.name} vs. ${match.away_team.name}`;
+const matchTitle = `${match.value!.home_team.name} vs. ${match.value!.away_team.name}`;
 const matchDescription = `Resultado, eventos, formaciones y estadísticas de ${matchTitle}.`;
 useSeoMeta({
   title: `${matchTitle} · Matchday`,
@@ -37,23 +34,14 @@ useSeoMeta({
 </script>
 <template>
   <main class="match-page">
-    <AppBreadcrumbs
-      :items="[{ label: 'Partidos', to: '/' }, { label: matchTitle }]"
-    />
+    <AppBreadcrumbs :items="[{ label: 'Partidos', to: '/' }, { label: matchTitle }]" />
     <NuxtLink to="/" class="back-to-matches"
-      ><AnimatedHeroIcon
-        :icon="ArrowLeftIcon"
-        motion="arrow"
-        class="ui-icon"
-        aria-hidden="true"
-      />
+      ><AnimatedHeroIcon :icon="ArrowLeftIcon" motion="arrow" class="ui-icon" aria-hidden="true" />
       Volver a la jornada</NuxtLink
     >
     <div class="match-page-heading">
-      <h1>
-        {{ match.home_team.name }} <span>vs.</span> {{ match.away_team.name }}
-      </h1>
-      <p>Vista de demostración · Datos ficticios</p>
+      <h1>{{ match.home_team.name }} <span>vs.</span> {{ match.away_team.name }}</h1>
+      <p>Acta, alineaciones y estadísticas del encuentro</p>
       <ShareButton :title="matchTitle" :text="matchDescription" />
     </div>
     <p class="detail-date">
@@ -67,52 +55,36 @@ useSeoMeta({
       }}
       · {{ time(match.scheduled_at) }} · Santiago
     </p>
-    <article
-      class="match-card detail-summary"
-      :class="{ 'is-live': match.status === 'live' }"
-    >
+    <article class="match-card detail-summary" :class="{ 'is-live': match.status === 'live' }">
       <div class="card-top">
         <span class="match-status" :class="match.status"
-          ><span v-if="match.status === 'live'" class="green-dot" />{{
-            matchState(match)
-          }}</span
+          ><span v-if="match.status === 'live'" class="green-dot" />{{ matchState(match) }}</span
         >
       </div>
       <div class="fixture">
         <div class="team">
-          <span
-            class="crest"
-            :style="{ '--team-color': teamColor(match.home_team.name) }"
-            >{{ initials(match.home_team.name) }}</span
-          >
+          <span class="crest" :style="{ '--team-color': teamColor(match.home_team.name) }">{{
+            initials(match.home_team.name)
+          }}</span>
           <h4>
-            <NuxtLink :to="`/teams/${match.home_team.id}`">{{
-              match.home_team.name
-            }}</NuxtLink>
+            <NuxtLink :to="`/teams/${match.home_team.id}`">{{ match.home_team.name }}</NuxtLink>
           </h4>
         </div>
         <div class="score">
           <template v-if="match.status === 'scheduled'"
-            ><strong class="kickoff">{{
-              time(match.scheduled_at)
-            }}</strong></template
+            ><strong class="kickoff">{{ time(match.scheduled_at) }}</strong></template
           ><template v-else
             ><strong
-              >{{ match.home_team.score }} <em>–</em>
-              {{ match.away_team.score }}</strong
+              >{{ match.home_team.score }} <em>–</em> {{ match.away_team.score }}</strong
             ></template
           >
         </div>
         <div class="team">
-          <span
-            class="crest"
-            :style="{ '--team-color': teamColor(match.away_team.name) }"
-            >{{ initials(match.away_team.name) }}</span
-          >
+          <span class="crest" :style="{ '--team-color': teamColor(match.away_team.name) }">{{
+            initials(match.away_team.name)
+          }}</span>
           <h4>
-            <NuxtLink :to="`/teams/${match.away_team.id}`">{{
-              match.away_team.name
-            }}</NuxtLink>
+            <NuxtLink :to="`/teams/${match.away_team.id}`">{{ match.away_team.name }}</NuxtLink>
           </h4>
         </div>
       </div>
@@ -124,10 +96,7 @@ useSeoMeta({
         class="scorers"
         aria-label="Goleadores"
       >
-        <ul
-          class="scorers-home"
-          :aria-label="`Goles de ${match.home_team.name}`"
-        >
+        <ul class="scorers-home" :aria-label="`Goles de ${match.home_team.name}`">
           <li v-for="(goal, index) in match.home_team.goals" :key="index">
             {{ goalLabel(goal) }} <span>{{ goalMinute(goal) }}</span>
           </li>
@@ -145,10 +114,7 @@ useSeoMeta({
             stroke-width=".65"
           />
         </svg>
-        <ul
-          class="scorers-away"
-          :aria-label="`Goles de ${match.away_team.name}`"
-        >
+        <ul class="scorers-away" :aria-label="`Goles de ${match.away_team.name}`">
           <li v-for="(goal, index) in match.away_team.goals" :key="index">
             {{ goalLabel(goal) }} <span>{{ goalMinute(goal) }}</span>
           </li>
@@ -164,10 +130,10 @@ useSeoMeta({
     </article>
     <NuxtLink :to="`/matches/manage?match=${match.id}`" class="back-to-matches"
       >Operar partido</NuxtLink
-    ><OperatedMatchReport
-      v-if="operations[match.id]"
-      :match-id="match.id"
-    /><MatchDetail v-else :match="match" />
+    ><OperatedMatchReport v-if="operations[match.id]" :match-id="match.id" /><MatchDetail
+      v-else
+      :match="match"
+    />
   </main>
 </template>
 

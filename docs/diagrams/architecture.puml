@@ -1,0 +1,10 @@
+@startuml MatchdayUIContext
+!include <C4/C4_Context>
+title Matchday - Contexto del frontend
+Person(visitor, "Visitante", "Consulta contenido y recibe recomendaciones sin crear una cuenta")
+Person(editor, "Operador", "Gestiona equipos, noticias, partidos y torneos")
+System(matchday, "Matchday", "Sitio y API para seguir y gestionar competiciones de fútbol")
+Rel(visitor, matchday, "Navega y consulta", "HTTPS")
+Rel(editor, matchday, "Administra contenido deportivo", "HTTPS")
+SHOW_LEGEND()
+@enduml

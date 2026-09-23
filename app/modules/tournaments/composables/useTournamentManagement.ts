@@ -1,105 +1,238 @@
-import { tournaments as seedTournaments, seasons as seedSeasons } from '~/modules/tournaments/data/tournaments'
-import { useDemoRegistrations } from '~/modules/tournaments/composables/useDemoRegistrations'
-import { useDemoTeams } from '~/modules/teams/composables/useDemoTeams'
-import { useMatchOperations } from '~/modules/matches/composables/useMatchOperations'
-import { groupStandings, matchWinner } from '~/modules/tournaments/utils/standings'
-import type { DemoPhase } from '~/modules/tournaments/types/management'
+﻿import { useRepositories } from "~/core/api/repository-context";
+import { useMatches } from "~/modules/matches/composables/useMatches";
+import type { DemoPhase } from "~/modules/tournaments/types/management";
+
 export function useTournamentManagement() {
-  const tournaments = useState('demo-tournaments', () => seedTournaments.map(t => ({ ...t })))
-  const seasons = useState('demo-seasons', () => seedSeasons.map(s => ({ ...s })))
-  const phases = useState<DemoPhase[]>('demo-competition-phases', () => [])
-  const registrations = useDemoRegistrations(), { teams } = useDemoTeams(), ops = useMatchOperations()
-  const id = (prefix: string) => `${prefix}-${crypto.randomUUID()}`
-  const locked = (season: string) => season === 'season-2026' || phases.value.some(p => p.season === season && p.generated)
-  function phase(id: string) { const p = phases.value.find(p => p.id === id); if (!p) throw new Error('Fase no encontrada.'); return p }
-  function mutable(p: DemoPhase) { if (locked(p.season) || p.status !== 'scheduled' || p.fixtures.some(f => ops.matches.value.find(m => m.id === f.match)?.status !== 'scheduled')) throw new Error('La estructura está bloqueada: hay partidos iniciados o eliminatorias generadas.') }
-  function createTournament(name: string, cap = 4) {
-    if (!name.trim() || tournaments.value.some(t => t.name.toLocaleLowerCase('es') === name.trim().toLocaleLowerCase('es'))) throw new Error('Indica un nombre de torneo único.')
-    if (!Number.isInteger(cap) || cap < 1 || cap > 32767) throw new Error('La capacidad debe ser un entero entre 1 y 32767.')
-    const key = id('tournament'); tournaments.value.push({ id:key, slug:key, name:name.trim(), country:'Chile', category:'Torneo', max_teams_per_group:cap }); return key
+  const repository = useRepositories().tournaments;
+  const matchRepository = useRepositories().matches;
+  const tournamentQuery = useAsyncData("tournaments", () => repository.list(), {
+    default: () => [],
+  });
+  const seasonQuery = useAsyncData("tournament-seasons", () => repository.listSeasons(), {
+    default: () => [],
+  });
+  const phaseQuery = useAsyncData("tournament-phases", () => repository.listPhases(), {
+    default: () => [],
+  });
+  const groupQuery = useAsyncData("tournament-groups", () => repository.listGroups(), {
+    default: () => [],
+  });
+  const entryQuery = useAsyncData("tournament-group-entries", () => repository.listEntries(), {
+    default: () => [],
+  });
+  const fixtureQuery = useAsyncData("tournament-fixtures", () => repository.listFixtures(), {
+    default: () => [],
+  });
+  const { matches, refresh: refreshMatches } = useMatches();
+  const standingsCache = useState<Record<string, any[]>>("tournament-standings", () => ({}));
+
+  const registrations = computed(() =>
+    Object.fromEntries(seasonQuery.data.value.map((season) => [season.id, season.teams])),
+  );
+  const phases = computed<DemoPhase[]>(() =>
+    phaseQuery.data.value.map((phase) => ({
+      id: phase.id,
+      season: phase.season,
+      name: phase.name,
+      kind: phase.kind,
+      status: phase.status,
+      generated: phase.generated,
+      qualifying: phase.qualifying_teams,
+      matchdays: phase.matchdays,
+      source: phase.source_phase ?? undefined,
+      scheduled_at: phase.scheduled_at ?? undefined,
+      groups: groupQuery.data.value
+        .filter((group) => group.phase === phase.id)
+        .map((group) => ({
+          id: group.id,
+          name: group.name,
+          teams: entryQuery.data.value
+            .filter((entry) => entry.group === group.id)
+            .map((entry) => entry.team),
+          manualOrder: group.tie_break_order,
+        })),
+      fixtures: fixtureQuery.data.value
+        .filter((fixture) => fixture.phase === phase.id)
+        .map((fixture) => ({
+          id: fixture.id,
+          match: fixture.match,
+          group: fixture.group ?? undefined,
+          matchday: fixture.matchday,
+        })),
+    })),
+  );
+
+  async function refreshStructure() {
+    await Promise.all([
+      phaseQuery.refresh(),
+      groupQuery.refresh(),
+      entryQuery.refresh(),
+      fixtureQuery.refresh(),
+      seasonQuery.refresh(),
+      refreshMatches(),
+    ]);
   }
-  function configure(tournamentId: string, name: string, cap: number) {
-    const t = tournaments.value.find(t => t.id === tournamentId)
-    if (!t || !name.trim() || !Number.isInteger(cap) || cap < 1 || cap > 32767) throw new Error('Revisa el nombre y la capacidad del torneo.')
-    if (tournaments.value.some(other => other.id !== t.id && other.name.toLocaleLowerCase('es') === name.trim().toLocaleLowerCase('es'))) throw new Error('Ya existe ese nombre de torneo.')
-    const editions = seasons.value.filter(s => s.tournament === t.id).map(s => s.id)
-    if ((editions.includes('season-2026') && cap < 4) || phases.value.some(p => editions.includes(p.season) && p.groups.some(g => g.teams.length > cap))) throw new Error('La capacidad no puede ser menor que un grupo existente.')
-    t.name = name.trim(); t.max_teams_per_group = cap
+  const locked = (season: string) =>
+    phases.value.some((phase) => phase.season === season && phase.generated);
+  async function createTournament(name: string, cap = 4) {
+    const id = await repository.create({
+      name,
+      country: "Chile",
+      category: "Torneo",
+      logo: null,
+      max_teams_per_group: cap,
+    });
+    await tournamentQuery.refresh();
+    return id;
   }
-  function createSeason(tournament: string, name: string) {
-    if (!tournaments.value.some(t => t.id === tournament) || !name.trim() || seasons.value.some(s => s.tournament === tournament && s.name.toLocaleLowerCase('es') === name.trim().toLocaleLowerCase('es'))) throw new Error('Indica una temporada nueva para el torneo.')
-    const key = id('season'); seasons.value.unshift({ id:key, name:name.trim(), tournament, has_data:false }); registrations.value[key] = []; return key
+  async function createSeason(tournament: string, name: string) {
+    const id = await repository.createSeason(tournament, name);
+    await seasonQuery.refresh();
+    return id;
   }
-  function enroll(season: string, team: string) {
-    if (locked(season)) throw new Error('La temporada tiene eliminatorias generadas; las inscripciones están cerradas.')
-    if (!seasons.value.some(s => s.id === season) || !teams.value.some(t => t.id === team)) throw new Error('Selecciona temporada y equipo válidos.')
-    const current = registrations.value[season] ?? []
-    if (current.includes(team)) throw new Error('El equipo ya está inscrito.')
-    registrations.value[season] = [...current,team]
+  async function enroll(season: string, team: string) {
+    await repository.enroll(season, team);
+    await seasonQuery.refresh();
   }
-  function withdraw(season: string, team: string) {
-    if (locked(season) || phases.value.some(p => p.season === season && (p.groups.some(g => g.teams.includes(team)) || p.fixtures.some(f => { const m = ops.matches.value.find(m => m.id === f.match); return m && [m.home_team.id,m.away_team.id].includes(team) })))) throw new Error('Retira sus asignaciones primero. Una temporada con eliminatorias generadas no permite bajas.')
-    registrations.value[season] = (registrations.value[season] ?? []).filter(t => t !== team)
+  async function withdraw(season: string, team: string) {
+    await repository.withdraw(season, team);
+    await seasonQuery.refresh();
   }
-  function createPhase(season: string, name: string, qualifying: number, matchdays: number) {
-    if (!seasons.value.some(s => s.id === season) || locked(season) || !name.trim() || !Number.isInteger(qualifying) || qualifying < 1 || !Number.isInteger(matchdays) || matchdays < 1) throw new Error('Revisa la temporada, nombre, clasificados y jornadas.')
-    const key = id('phase'); phases.value.push({ id:key, season, name:name.trim(), kind:'groups', status:'scheduled', generated:false, qualifying, matchdays, groups:[], fixtures:[] }); return key
+  async function createPhase(season: string, name: string, qualifying: number, matchdays: number) {
+    const order = phases.value.filter((phase) => phase.season === season).length;
+    const id = await repository.createPhase({
+      season,
+      name,
+      kind: "groups",
+      order,
+      qualifying_teams: qualifying,
+      matchdays,
+    });
+    await phaseQuery.refresh();
+    return id;
   }
-  function addGroup(phaseId: string, name: string) { const p = phase(phaseId); mutable(p); if (!name.trim() || p.groups.some(g => g.name.toLocaleLowerCase('es') === name.trim().toLocaleLowerCase('es'))) throw new Error('Indica un nombre de grupo único en la fase.'); p.groups.push({ id:id('group'), name:name.trim(), teams:[], manualOrder:[] }) }
-  function assign(phaseId: string, groupId: string, team: string) {
-    const p = phase(phaseId); mutable(p); const g = p.groups.find(g => g.id === groupId), season = seasons.value.find(s => s.id === p.season)!, tournament = tournaments.value.find(t => t.id === season.tournament)!
-    if (!g || !(registrations.value[p.season] ?? []).includes(team)) throw new Error('El equipo debe estar inscrito en esta temporada.')
-    if (p.groups.some(g => g.teams.includes(team))) throw new Error('El equipo ya pertenece a un grupo de esta fase.')
-    if (g.teams.length >= tournament.max_teams_per_group) throw new Error('El grupo está completo.')
-    g.teams.push(team); g.manualOrder = []
+  async function addGroup(phase: string, name: string) {
+    await repository.createGroup(phase, name);
+    await groupQuery.refresh();
   }
-  function removeTeam(phaseId: string, groupId: string, team: string) { const p = phase(phaseId); mutable(p); const g = p.groups.find(g => g.id === groupId)!; if (p.fixtures.some(f => f.group === groupId && ops.matches.value.some(m => m.id === f.match && [m.home_team.id,m.away_team.id].includes(team)))) throw new Error('Desvincula primero sus partidos del grupo.'); g.teams = g.teams.filter(t => t !== team); g.manualOrder = [] }
-  function removeGroup(phaseId: string, groupId: string) { const p = phase(phaseId); mutable(p); if (p.fixtures.some(f => f.group === groupId)) throw new Error('Desvincula primero los partidos del grupo.'); p.groups = p.groups.filter(g => g.id !== groupId) }
-  function removePhase(phaseId: string) { const p = phase(phaseId); mutable(p); if (p.fixtures.length || p.groups.length) throw new Error('Elimina los grupos y desvincula sus partidos primero.'); phases.value = phases.value.filter(p => p.id !== phaseId) }
-  function fixture(phaseId: string, groupId: string, matchId: string, matchday: number) {
-    const p = phase(phaseId); mutable(p); const g = p.groups.find(g => g.id === groupId), m = ops.matches.value.find(m => m.id === matchId)
-    if (!g || !m || ![m.home_team.id,m.away_team.id].every(id => g.teams.includes(id))) throw new Error('Ambos equipos del partido deben pertenecer al grupo.')
-    if (phases.value.some(p => p.fixtures.some(f => f.match === matchId))) throw new Error('El partido ya está vinculado a una fase.')
-    if (m.status !== 'scheduled' || !Number.isInteger(matchday) || matchday < 1 || matchday > p.matchdays) throw new Error('Selecciona un partido pendiente y una jornada válida.')
-    p.fixtures.push({ match:matchId, group:groupId, matchday })
+  async function assign(_phase: string, group: string, team: string) {
+    await repository.addEntry(group, team);
+    await entryQuery.refresh();
   }
-  function unfixture(phaseId: string, matchId: string) { const p = phase(phaseId); mutable(p); p.fixtures = p.fixtures.filter(f => f.match !== matchId) }
-  function standings(phaseId: string, groupId: string) { const p = phase(phaseId), g = p.groups.find(g => g.id === groupId)!; return groupStandings(g, ops.matches.value.filter(m => p.fixtures.some(f => f.group === groupId && f.match === m.id)), ops.operations.value) }
-  function finishGroups(phaseId: string) { const p = phase(phaseId); if (locked(p.season) || !p.groups.length || p.groups.some(g => g.teams.length < p.qualifying || !p.fixtures.some(f => f.group === g.id)) || p.fixtures.some(f => ops.matches.value.find(m => m.id === f.match)?.status !== 'finished')) throw new Error('Cada grupo necesita suficientes equipos y partidos vinculados; todos los encuentros deben estar finalizados.'); p.status = 'finished' }
-  function manualOrder(phaseId: string, groupId: string, order: string[]) { const p = phase(phaseId), g = p.groups.find(g => g.id === groupId)!; if (locked(p.season) || p.status !== 'finished' || order.length !== g.teams.length || new Set(order).size !== order.length || order.some(id => !g.teams.includes(id))) throw new Error('Finaliza la fase y ordena todos los equipos una sola vez antes de generar las eliminatorias.'); g.manualOrder = [...order] }
-  function generate(season: string, entrants: string[], date: string, interval: number, third: boolean, source?: string) {
-    if (locked(season)) throw new Error('La temporada ya tiene eliminatorias generadas.')
-    if (source) {
-      const p = phase(source); if (p.season !== season || p.status !== 'finished') throw new Error('Finaliza la fase de grupos antes de clasificar equipos.')
-      const groups = [...p.groups].sort((a,b) => a.name.localeCompare(b.name))
-      const tables = groups.map(g => standings(p.id,g.id))
-      if (!groups.length || tables.some(rows => rows.slice(0,p.qualifying).some(row => row.tied))) throw new Error('Resuelve los empates de clasificación mediante el orden manual.')
-      entrants = Array.from({ length:p.qualifying },(_, rank) => tables.map(rows => rows[rank]!.id)).flat()
-    }
-    const n = entrants.length
-    if (n < 2 || n > 64 || (n & (n-1)) || new Set(entrants).size !== n || entrants.some(t => !(registrations.value[season] ?? []).includes(t))) throw new Error('Selecciona 2, 4, 8, 16, 32 o 64 equipos distintos inscritos en la temporada.')
-    if (!Number.isFinite(Date.parse(date)) || !Number.isInteger(interval) || interval < 1 || interval > 365 || (third && n < 4)) throw new Error('Indica una fecha válida, intervalo de 1 a 365 días y al menos cuatro equipos para tercer puesto.')
-    let previous = '', round = 0
-    for (let size = n; size >= 2; size /= 2) {
-      const key = id('round'), scheduled_at = new Date(Date.parse(date)+round*interval*86400000).toISOString()
-      const p: DemoPhase = { id:key, season, name:size === 2 ? 'Final' : size === 4 ? 'Semifinales' : `Ronda de ${size}`, kind:'knockout', status:'scheduled', generated:true, qualifying:0, matchdays:1, groups:[], fixtures:[], source:previous || source, scheduled_at, interval }
-      if (!previous) for (let index = 0; index < n/2; index++) p.fixtures.push({ match:ops.create(entrants[index]!,entrants[n-1-index]!,scheduled_at), matchday:1 })
-      phases.value.push(p); previous = key; round++
-    }
-    if (third) { const semifinal = phases.value.find(p => p.season === season && p.name === 'Semifinales')!; phases.value.push({ id:id('third'), season, name:'Tercer puesto', kind:'third_place', status:'scheduled', generated:true, qualifying:0, matchdays:1, groups:[], fixtures:[], source:semifinal.id, scheduled_at:new Date(Date.parse(date)+(round-1)*interval*86400000).toISOString() }) }
+  async function removeTeam(_phase: string, group: string, team: string) {
+    const entry = entryQuery.data.value.find((item) => item.group === group && item.team === team);
+    if (!entry) throw new Error("Inscripción de grupo no encontrada.");
+    await repository.deleteEntry(entry.id);
+    await entryQuery.refresh();
   }
-  function advance(season: string) {
-    let created = 0
-    for (const p of phases.value.filter(p => p.season === season && p.generated)) {
-      if (p.fixtures.length && p.fixtures.every(f => matchWinner(ops.matches.value.find(m => m.id === f.match)))) p.status = 'finished'
-      if (p.fixtures.length || !p.source) continue
-      const previous = phases.value.find(source => source.id === p.source)
-      if (!previous || previous.kind === 'groups' || previous.status !== 'finished') continue
-      const matches = previous.fixtures.map(f => ops.matches.value.find(m => m.id === f.match)!)
-      const entrants = matches.map(m => p.kind === 'third_place' ? (m.home_team.id === matchWinner(m) ? m.away_team.id : m.home_team.id) : matchWinner(m)!)
-      for (let i = 0; i < entrants.length; i += 2) { p.fixtures.push({ match:ops.create(entrants[i]!,entrants[i+1]!,p.scheduled_at!), matchday:1 }); created++ }
-    }
-    return created
+  async function removeGroup(_phase: string, group: string) {
+    await repository.deleteGroup(group);
+    await groupQuery.refresh();
   }
-  return { tournaments, seasons, phases, registrations, matches:ops.matches, locked, createTournament, configure, createSeason, enroll, withdraw, createPhase, addGroup, assign, removeTeam, removeGroup, removePhase, fixture, unfixture, standings, finishGroups, manualOrder, generate, advance }
+  async function removePhase(phase: string) {
+    await repository.deletePhase(phase);
+    await phaseQuery.refresh();
+  }
+  async function fixture(phase: string, group: string, match: string, matchday: number) {
+    await repository.createFixture({
+      phase,
+      group,
+      match,
+      position: fixtureQuery.data.value.filter((item) => item.phase === phase).length,
+      matchday,
+    });
+    await fixtureQuery.refresh();
+  }
+  async function unfixture(_phase: string, match: string) {
+    const fixture = fixtureQuery.data.value.find((item) => item.match === match);
+    if (!fixture) throw new Error("Fixture no encontrado.");
+    await repository.deleteFixture(fixture.id);
+    await fixtureQuery.refresh();
+  }
+  function standings(phase: string, group: string) {
+    const season = phases.value.find((item) => item.id === phase)?.season;
+    const data = season ? (standingsCache.value[season] ?? []) : [];
+    const rows = data.find((item: any) => item.id === group)?.rows ?? [];
+    return rows.map((row: any) => ({
+      ...row,
+      wins: row.w,
+      draws: row.d,
+      losses: row.l,
+      tied: !!row.tie_break_required,
+    }));
+  }
+  async function loadStandings(season: string) {
+    standingsCache.value[season] = await repository.standings(season);
+  }
+  async function finishGroups(phase: string) {
+    await repository.updatePhaseStatus(phase, "finished");
+    await phaseQuery.refresh();
+    const season = phases.value.find((item) => item.id === phase)?.season;
+    if (season) await loadStandings(season);
+  }
+  async function manualOrder(_phase: string, group: string, order: string[]) {
+    await repository.setTieBreak(group, order);
+    await groupQuery.refresh();
+  }
+  async function generate(
+    season: string,
+    entrants: string[],
+    date: string,
+    interval: number,
+    third: boolean,
+    source?: string,
+  ) {
+    await repository.generateBracket(season, {
+      starts_at: new Date(date).toISOString(),
+      ...(source ? { source_phase_id: source } : { team_ids: entrants }),
+      round_interval_days: interval,
+      third_place: third,
+    });
+    await refreshStructure();
+  }
+  async function advance(season: string) {
+    await repository.advanceBracket(season);
+    await refreshStructure();
+    return 0;
+  }
+  async function createMatch(home: string, away: string, date: string) {
+    const id = await matchRepository.create(home, away, new Date(date).toISOString());
+    await refreshMatches();
+    return id;
+  }
+
+  watch(
+    () => seasonQuery.data.value.map((season) => season.id).join(","),
+    () => {
+      for (const season of seasonQuery.data.value)
+        if (!standingsCache.value[season.id]) void loadStandings(season.id);
+    },
+    { immediate: true },
+  );
+  return {
+    tournaments: tournamentQuery.data,
+    seasons: seasonQuery.data,
+    phases,
+    registrations,
+    matches,
+    locked,
+    createTournament,
+    createSeason,
+    enroll,
+    withdraw,
+    createPhase,
+    addGroup,
+    assign,
+    removeTeam,
+    removeGroup,
+    removePhase,
+    fixture,
+    unfixture,
+    standings,
+    finishGroups,
+    manualOrder,
+    generate,
+    advance,
+    createMatch,
+  };
 }

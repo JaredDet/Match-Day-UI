@@ -1,0 +1,11 @@
+.nuxt
+.output
+.data
+.nitro
+.cache
+dist
+node_modules
+public
+docs/diagrams
+pnpm-lock.yaml
+commit-build.log
