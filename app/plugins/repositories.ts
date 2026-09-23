@@ -6,7 +6,10 @@ import { ApiTeamRepository } from "~/modules/teams/infrastructure/api-team-repos
 import { ApiTournamentRepository } from "~/modules/tournaments/infrastructure/api-tournament-repository";
 
 export default defineNuxtPlugin(() => {
-  const apiBase = useRuntimeConfig().public.apiBase;
+  const config = useRuntimeConfig();
+  const apiBase = import.meta.server
+    ? config.apiInternalBase || config.public.apiBase
+    : config.public.apiBase;
   const http = createHttpClient(apiBase);
   return {
     provide: {

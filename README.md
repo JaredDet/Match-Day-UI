@@ -12,6 +12,20 @@ pnpm dev
 
 `NUXT_PUBLIC_API_BASE` indica la raíz de la API y por defecto vale `http://localhost:8000/api`. El navegador incluye las cookies anónimas y CSRF con `credentials: include`. El backend debe incluir el origen del frontend en `DJANGO_CORS_ALLOWED_ORIGINS` y `DJANGO_CSRF_TRUSTED_ORIGINS`.
 
+## Docker
+
+La composición está en el repositorio hermano `matchday` y construye este
+frontend junto con la API, PostgreSQL, Redis y los procesos en segundo plano:
+
+```bash
+cd ../matchday
+docker compose up --build
+```
+
+El navegador usa `NUXT_PUBLIC_API_BASE`, mientras el renderizado de Nuxt usa
+`NUXT_API_INTERNAL_BASE` para comunicarse con el backend dentro de la red de
+Docker.
+
 ## Organización
 
 ```text

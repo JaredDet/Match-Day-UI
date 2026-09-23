@@ -1,5 +1,4 @@
 ﻿<script setup lang="ts">
-import "~/assets/css/main.css";
 import AppHeader from "~/components/AppHeader.vue";
 import AppFooter from "~/components/AppFooter.vue";
 import { useNavigationTracking } from "~/modules/recommendations/composables/useNavigationTracking";

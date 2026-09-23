@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { NuxtError } from "#app";
-import "~/assets/css/main.css";
 import AppFooter from "~/components/AppFooter.vue";
 import AppHeader from "~/components/AppHeader.vue";
 
