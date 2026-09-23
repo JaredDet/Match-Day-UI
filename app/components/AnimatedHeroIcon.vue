@@ -23,18 +23,23 @@ onBeforeUnmount(() => popAnimation?.cancel())
     <span ref="animationFrame" class="hero-animation-frame"><component :is="icon" class="hero-glyph" aria-hidden="true" /></span>
   </span>
 </template>
+
 <style scoped>
+
+
+
+
+
 .animated-hero{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;width:18px;height:18px;flex-shrink:0}
 .hero-animation-frame{display:block;width:100%;height:100%;transform-origin:top right}
 .hero-glyph{display:block;width:100%;height:100%;transform-origin:center}
 @media(prefers-reduced-motion:no-preference){
   .hero-glyph{transition:transform .22s ease,color .22s ease}
-  .hero-lift:hover .hero-glyph,:global(button:hover) .hero-lift .hero-glyph,:global(a:hover) .hero-lift .hero-glyph{transform:translateY(-2px)}
-  .hero-arrow:hover .hero-glyph,:global(button:hover) .hero-arrow .hero-glyph,:global(a:hover) .hero-arrow .hero-glyph{animation:hero-arrow .55s ease both}
-  .hero-turn:hover .hero-glyph,:global(button:hover) .hero-turn .hero-glyph{transform:rotate(20deg)}
-  :global(button:active) .animated-hero:not(.hero-pop) .hero-glyph{transform:scale(.9)}
+  .hero-lift:hover .hero-glyph,button:hover .hero-lift .hero-glyph,a:hover .hero-lift .hero-glyph{transform:translateY(-2px)}
+  .hero-arrow:hover .hero-glyph,button:hover .hero-arrow .hero-glyph,a:hover .hero-arrow .hero-glyph{animation:hero-arrow .55s ease both}
+  .hero-turn:hover .hero-glyph,button:hover .hero-turn .hero-glyph{transform:rotate(20deg)}
+  button:active .animated-hero:not(.hero-pop) .hero-glyph{transform:scale(.9)}
 }
 @keyframes hero-arrow{0%,100%{transform:translateX(0)}45%{transform:translateX(3px)}}
 </style>
-
 

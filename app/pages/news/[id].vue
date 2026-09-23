@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import MatchDetailView from "~/modules/matches/views/MatchDetailView.vue"
+import NewsDetailView from "~/modules/news/views/NewsDetailView.vue"
 definePageMeta({ key: route => String(route.params.id) })
 </script>
 
 <template>
-  <MatchDetailView />
+  <NewsDetailView />
 </template>
