@@ -40,6 +40,23 @@ const previewParagraph = computed(
 const contentAtLimit = computed(
   () => contentLength.value >= MAX_CONTENT_LENGTH,
 );
+const savedSnapshot = ref("");
+const formSnapshot = computed(() =>
+  JSON.stringify([
+    selected.value,
+    title.value,
+    team.value,
+    content.value,
+    cover.value,
+  ]),
+);
+useUnsavedChanges(
+  computed(() =>
+    !!title.value || !!content.value
+      ? formSnapshot.value !== savedSnapshot.value
+      : false,
+  ),
+);
 const labels = {
   DRAFT: "Borrador",
   SCHEDULED: "Programada",
@@ -129,6 +146,7 @@ async function edit(id = "") {
   message.value = "";
   await nextTick();
   renderEditor();
+  savedSnapshot.value = formSnapshot.value;
 }
 function submit() {
   serializeEditor();

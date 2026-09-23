@@ -19,7 +19,11 @@ const initials = (name?: string) =>
 <template>
   <article class="recommendation-card">
     <NuxtLink :to="item.path" class="visual" tabindex="-1" aria-hidden="true">
-      <img v-if="item.image" :src="item.image" alt="" />
+      <AppImage
+        v-if="item.image"
+        :src="item.image"
+        :alt="`Imagen de ${item.title}`"
+      />
       <div v-else-if="item.kind === 'match'" class="match-visual">
         <span>{{ initials(item.homeTeam) }}</span>
         <strong>{{ item.homeScore }}<i>–</i>{{ item.awayScore }}</strong>
@@ -71,8 +75,12 @@ const initials = (name?: string) =>
   inset: 0;
   background: linear-gradient(0deg, #080b0caa, transparent 60%);
 }
-.visual img {
+.visual :deep(.app-image) {
   position: absolute;
+  width: 100%;
+  height: 100%;
+}
+.visual :deep(img) {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -220,7 +228,7 @@ a:focus-visible {
     border-color: var(--accent);
     box-shadow: 0 14px 34px var(--shadow);
   }
-  .recommendation-card:hover .visual img {
+  .recommendation-card:hover .visual :deep(img) {
     transform: scale(1.045);
   }
 }

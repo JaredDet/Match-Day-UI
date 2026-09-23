@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { useDemoNews } from "~/modules/news/composables/useDemoNews"
-import TeamBadge from "~/modules/teams/components/TeamBadge.vue"
-import EmptyState from "~/components/EmptyState.vue"
-import { useTeamProfiles } from "~/modules/teams/composables/useTeamProfiles"
+import { useDemoNews } from "~/modules/news/composables/useDemoNews";
+import TeamBadge from "~/modules/teams/components/TeamBadge.vue";
+import EmptyState from "~/components/EmptyState.vue";
+import { useTeamProfiles } from "~/modules/teams/composables/useTeamProfiles";
 
 import { newsDate } from "~/modules/news/data/news";
 import { positionNames, resultNames } from "~/modules/teams/data/teamProfiles";
-const resultLetters = { win: 'V', draw: 'E', loss: 'D' } as const;
-const { publishedNews } = useDemoNews()
+const resultLetters = { win: "V", draw: "E", loss: "D" } as const;
+const { publishedNews } = useDemoNews();
 const route = useRoute(),
   profiles = useTeamProfiles();
 const team = computed(() =>
@@ -37,11 +37,35 @@ const metrics = computed(() =>
       ]
     : [],
 );
-const teamNews = computed(() => publishedNews.value.filter(item => item.team_id === team.value?.id).map(item => ({ id: item.id, category: 'Club', title: item.title, summary: item.preview, image: item.cover_image, date: newsDate(item.published_at!) })));
-useHead(() => ({ title: `${team.value?.name ?? "Equipo"} · Matchday` }));
+const teamNews = computed(() =>
+  publishedNews.value
+    .filter((item) => item.team_id === team.value?.id)
+    .map((item) => ({
+      id: item.id,
+      category: "Club",
+      title: item.title,
+      summary: item.preview,
+      image: item.cover_image,
+      date: newsDate(item.published_at!),
+    })),
+);
+useSeoMeta(() => ({
+  title: `${team.value?.name ?? "Equipo"} · Matchday`,
+  description: `Plantilla, noticias y resultados de ${team.value?.name ?? "este equipo"}.`,
+  ogTitle: team.value?.name,
+  ogDescription: `Plantilla, noticias y resultados de ${team.value?.name ?? "este equipo"}.`,
+  twitterTitle: team.value?.name,
+}));
 </script>
 <template>
   <main v-if="team" class="competition-page">
+    <AppBreadcrumbs
+      :items="[
+        { label: 'Inicio', to: '/' },
+        { label: 'Equipos', to: '/teams' },
+        { label: team.name },
+      ]"
+    />
     <NuxtLink to="/teams" class="section-back">← Todos los equipos</NuxtLink>
     <div class="entity-heading">
       <div class="entity-heading-badge">
@@ -54,6 +78,10 @@ useHead(() => ({ title: `${team.value?.name ?? "Equipo"} · Matchday` }));
       </div>
     </div>
     <p class="demo-caption">Datos de demostración · Escudo provisional</p>
+    <ShareButton
+      :title="team.name"
+      :text="`Plantilla, noticias y resultados de ${team.name}.`"
+    />
     <nav class="entity-tabs" aria-label="Secciones del equipo">
       <button
         v-for="item in tabs"
@@ -112,7 +140,10 @@ useHead(() => ({ title: `${team.value?.name ?? "Equipo"} · Matchday` }));
                   :key="match.match_id"
                   :class="['result-pill', match.result]"
                   :title="`${resultNames[match.result]} contra ${match.opponent_name}`"
-                  >{{ resultLetters[match.result] }}<span class="sr-only">{{ resultNames[match.result] }}</span></span
+                  >{{ resultLetters[match.result]
+                  }}<span class="sr-only">{{
+                    resultNames[match.result]
+                  }}</span></span
                 >
               </div>
               <p v-if="!team.recent_matches.length" class="profile-muted">
@@ -128,16 +159,27 @@ useHead(() => ({ title: `${team.value?.name ?? "Equipo"} · Matchday` }));
               <h2>Noticias</h2>
               <span>Últimas novedades</span>
             </div>
-            <EmptyState v-if="!teamNews.length" title="Sin noticias publicadas" description="Este equipo todavía no tiene publicaciones." />
-          <div class="news-grid">
+            <EmptyState
+              v-if="!teamNews.length"
+              title="Sin noticias publicadas"
+              description="Este equipo todavía no tiene publicaciones."
+            />
+            <div class="news-grid">
               <article
                 v-for="item in teamNews"
                 :key="item.title"
                 class="news-card"
               >
-                <NuxtLink v-if="item.image" :to="`/news/${item.id}`" class="news-cover"><img :src="item.image" alt="" /></NuxtLink>
+                <NuxtLink
+                  v-if="item.image"
+                  :to="`/news/${item.id}`"
+                  class="news-cover"
+                  ><img :src="item.image" alt=""
+                /></NuxtLink>
                 <span class="news-tag">{{ item.category }}</span>
-                <h3><NuxtLink :to="`/news/${item.id}`">{{ item.title }}</NuxtLink></h3>
+                <h3>
+                  <NuxtLink :to="`/news/${item.id}`">{{ item.title }}</NuxtLink>
+                </h3>
                 <p>{{ item.summary }}</p>
                 <time>{{ item.date }}</time>
               </article>
@@ -180,7 +222,14 @@ useHead(() => ({ title: `${team.value?.name ?? "Equipo"} · Matchday` }));
                   >
                 </div>
               </div>
-              <span :class="['result-pill', match.result]" :title="resultNames[match.result]">{{ resultLetters[match.result] }}<span class="sr-only">{{ resultNames[match.result] }}</span></span></NuxtLink
+              <span
+                :class="['result-pill', match.result]"
+                :title="resultNames[match.result]"
+                >{{ resultLetters[match.result]
+                }}<span class="sr-only">{{
+                  resultNames[match.result]
+                }}</span></span
+              ></NuxtLink
             >
             <p v-if="!team.recent_matches.length" class="section-empty">
               Todavía no hay resultados recientes.
@@ -195,16 +244,27 @@ useHead(() => ({ title: `${team.value?.name ?? "Equipo"} · Matchday` }));
             <h2>Noticias</h2>
             <span>Todo el contenido del club</span>
           </div>
-          <EmptyState v-if="!teamNews.length" title="Sin noticias publicadas" description="Este equipo todavía no tiene publicaciones." />
+          <EmptyState
+            v-if="!teamNews.length"
+            title="Sin noticias publicadas"
+            description="Este equipo todavía no tiene publicaciones."
+          />
           <div class="news-grid full-news-grid">
             <article
               v-for="item in teamNews"
               :key="item.title"
               class="news-card"
             >
-              <NuxtLink v-if="item.image" :to="`/news/${item.id}`" class="news-cover"><img :src="item.image" alt="" /></NuxtLink>
+              <NuxtLink
+                v-if="item.image"
+                :to="`/news/${item.id}`"
+                class="news-cover"
+                ><img :src="item.image" alt=""
+              /></NuxtLink>
               <span class="news-tag">{{ item.category }}</span>
-              <h3><NuxtLink :to="`/news/${item.id}`">{{ item.title }}</NuxtLink></h3>
+              <h3>
+                <NuxtLink :to="`/news/${item.id}`">{{ item.title }}</NuxtLink>
+              </h3>
               <p>{{ item.summary }}</p>
               <time>{{ item.date }}</time>
             </article>
@@ -788,7 +848,6 @@ h2 {
   }
 }
 
-
 .team-roster-player:hover {
   border-color: var(--ui-border, #505d63);
   background: var(--ui-hover, #1b2125);
@@ -864,9 +923,11 @@ h2 {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform .25s ease;
+  transition: transform 0.25s ease;
 }
-.news-card:hover .news-cover img { transform: scale(1.035); }
+.news-card:hover .news-cover img {
+  transform: scale(1.035);
+}
 .news-tag {
   align-self: flex-start;
   display: inline-flex;
@@ -901,23 +962,64 @@ h2 {
   }
 }
 
-.result-pill.win { background: var(--ui-surface, #2f4425); color: var(--ui-success, #bde897); }
-.result-pill.loss { background: var(--ui-surface, #442c29); color: var(--ui-danger, #edb5ad); }
-html[data-theme="light"] .result-pill.win { background: #dff1c4; color: #224c1b; }
-html[data-theme="light"] .result-pill.loss { background: #f8d8d0; color: #7b3127; }
-html[data-theme="light"] .result-pill.draw { background: #ebebeb; color: #3b3b3b; }
-html[data-theme="light"] .entity-tabs button.active { color: var(--accent) !important; border-color: var(--accent); }
+.result-pill.win {
+  background: var(--ui-surface, #2f4425);
+  color: var(--ui-success, #bde897);
+}
+.result-pill.loss {
+  background: var(--ui-surface, #442c29);
+  color: var(--ui-danger, #edb5ad);
+}
+html[data-theme="light"] .result-pill.win {
+  background: #dff1c4;
+  color: #224c1b;
+}
+html[data-theme="light"] .result-pill.loss {
+  background: #f8d8d0;
+  color: #7b3127;
+}
+html[data-theme="light"] .result-pill.draw {
+  background: #ebebeb;
+  color: #3b3b3b;
+}
+html[data-theme="light"] .entity-tabs button.active {
+  color: var(--accent) !important;
+  border-color: var(--accent);
+}
 
 @media (prefers-reduced-motion: no-preference) {
-  button, a, input { transition: color .18s ease, background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
-  button:not(:disabled):active, .primary-action:active { transform: translateY(1px); }
-  input:focus-visible { box-shadow: 0 0 0 3px var(--ui-success-soft, rgba(189, 237, 117, .12)); }
+  button,
+  a,
+  input {
+    transition:
+      color 0.18s ease,
+      background-color 0.18s ease,
+      border-color 0.18s ease,
+      box-shadow 0.18s ease,
+      transform 0.18s ease;
+  }
+  button:not(:disabled):active,
+  .primary-action:active {
+    transform: translateY(1px);
+  }
+  input:focus-visible {
+    box-shadow: 0 0 0 3px var(--ui-success-soft, rgba(189, 237, 117, 0.12));
+  }
 }
 @media (prefers-reduced-motion: no-preference) {
-.team-roster-player, .profile-result { transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+  .team-roster-player,
+  .profile-result {
+    transition:
+      transform 0.2s ease,
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
 }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
-.team-roster-player:hover, .profile-result:hover { transform: translateY(-2px); box-shadow: 0 6px 18px var(--shadow); }
+  .team-roster-player:hover,
+  .profile-result:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px var(--shadow);
+  }
 }
 </style>
-

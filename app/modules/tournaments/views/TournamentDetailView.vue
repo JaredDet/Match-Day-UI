@@ -73,10 +73,23 @@ const currentPhaseId = computed(
       .filter((phase) => phase.status !== "finished")
       .sort((left, right) => left.order - right.order)[0]?.id,
 );
-useHead({ title: "Copa Matchday · Torneos" });
+useSeoMeta(() => ({
+  title: `${tournament.value?.name ?? "Torneo"} · Matchday`,
+  description: `Equipos, fases, grupos y eliminatorias de ${tournament.value?.name ?? "este torneo"}.`,
+  ogTitle: tournament.value?.name,
+  ogDescription: `Equipos, fases, grupos y eliminatorias de ${tournament.value?.name ?? "este torneo"}.`,
+  twitterTitle: tournament.value?.name,
+}));
 </script>
 <template>
   <main v-if="tournament" class="competition-page">
+    <AppBreadcrumbs
+      :items="[
+        { label: 'Inicio', to: '/' },
+        { label: 'Torneos', to: '/tournaments' },
+        { label: tournament.name },
+      ]"
+    />
     <PageHeading
       :title="tournament.name"
       :kicker="`${tournament.country} · ${tournament.category}`"
@@ -104,6 +117,10 @@ useHead({ title: "Copa Matchday · Torneos" });
         class="primary-action"
         >Inscribir equipos</NuxtLink
       >
+      <ShareButton
+        :title="tournament.name"
+        :text="`Equipos, fases y eliminatorias de ${tournament.name}.`"
+      />
     </PageHeading>
     <nav class="entity-tabs" aria-label="Secciones del torneo">
       <button
