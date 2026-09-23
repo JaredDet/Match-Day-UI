@@ -19,6 +19,12 @@ useHead({ title: "Torneos · Matchday" });
         :key="tournament.id"
         class="info-panel editorial-card"
       >
+        <AppImage
+          v-if="tournament.logo"
+          class="tournament-logo"
+          :src="tournament.logo"
+          :alt="`Emblema de ${tournament.name}`"
+        />
         <div class="tournament-mark">
           <span>0{{ index + 1 }}</span
           ><strong>{{ tournament.category }}</strong>
@@ -62,6 +68,14 @@ h2 {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+.tournament-logo {
+  width: 76px;
+  height: 76px;
+  margin-bottom: 18px;
+}
+.tournament-logo :deep(img) {
+  object-fit: contain;
 }
 @media (min-width: 1450px) {
   main {

@@ -74,12 +74,12 @@ export function useTournamentManagement() {
   }
   const locked = (season: string) =>
     phases.value.some((phase) => phase.season === season && phase.generated);
-  async function createTournament(name: string, cap = 4) {
+  async function createTournament(name: string, cap = 4, logo: string | null = null) {
     const id = await repository.create({
       name,
       country: "Chile",
       category: "Torneo",
-      logo: null,
+      logo,
       max_teams_per_group: cap,
     });
     await tournamentQuery.refresh();

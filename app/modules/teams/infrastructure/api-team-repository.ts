@@ -81,7 +81,10 @@ export class ApiTeamRepository implements TeamRepository {
       >,
   ) {
     const crest = import.meta.client && data.crest ? dataUrlFile(data.crest) : null;
-    if (!crest) return this.http.request<void>(`teams/${id}/`, { method: "PATCH", body: data });
+    if (!crest) {
+      const { crest: _currentCrest, ...fields } = data;
+      return this.http.request<void>(`teams/${id}/`, { method: "PATCH", body: fields });
+    }
     const body = new FormData();
     body.append("name", data.name);
     if (data.head_coach_name) body.append("head_coach_name", data.head_coach_name);

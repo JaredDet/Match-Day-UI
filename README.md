@@ -32,6 +32,8 @@ Las vistas no conocen `$fetch` ni las rutas HTTP. Consultan interfaces mediante 
 
 Las recomendaciones no requieren cuenta. El frontend registra vistas de detalle, acumula tiempo activo cada 15 segundos y envía el último heartbeat al ocultar o cerrar la página. La cookie firmada pertenece al navegador; no se guarda en `localStorage`. Consulta [docs/recommendations.md](docs/recommendations.md) para ver el flujo completo.
 
+Los formularios de equipos y torneos permiten previsualizar escudos y logos JPG, PNG o WebP de hasta 5 MB. El repositorio convierte la vista previa local en un archivo y la envía como `multipart/form-data`; las vistas públicas reutilizan las URLs multimedia devueltas por la API. Las noticias muestran del mismo modo las portadas almacenadas por el backend.
+
 Los diagramas de contexto, contenedores, componentes, secuencia y navegación entre pantallas están descritos en [docs/README.md](docs/README.md).
 
 ## Calidad local

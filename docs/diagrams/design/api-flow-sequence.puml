@@ -19,7 +19,12 @@ Usuario -> Vista: confirma un formulario
 Vista -> Application: execute(input)
 Application -> Contract: comando
 Repository -> Http: POST / PUT / PATCH / DELETE
-Http -> Api: Cookie + X-CSRFToken
+alt formulario con imagen
+  Repository -> Repository: data URL a File + FormData
+  Http -> Api: multipart + Cookie + X-CSRFToken
+else formulario sin imagen
+  Http -> Api: JSON + Cookie + X-CSRFToken
+end
 Api --> Vista: resultado o error de dominio
 opt detalle elegible para recomendaciones
   Vista -> Api: GET + X-Navigation-Intent + UUID

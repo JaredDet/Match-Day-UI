@@ -16,6 +16,7 @@ export type Period =
 export type Team = {
   id: string;
   name: string;
+  crest?: string | null;
   team_side: "home" | "away";
   score: number;
   formation: string | null;

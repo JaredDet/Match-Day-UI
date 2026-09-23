@@ -12,6 +12,7 @@ const manager = useTournamentManagement(),
 const tournamentId = ref(String(useRoute().query.tournament ?? tournaments.value[0]?.id ?? "")),
   seasonId = ref(String(useRoute().query.season ?? "")),
   name = ref(""),
+  logo = ref<string | null>(null),
   cap = ref(4),
   edition = ref(""),
   phaseName = ref("Fase de grupos"),
@@ -59,6 +60,17 @@ async function run(action: () => Promise<unknown>) {
     error.value = (e as Error).message;
   }
 }
+function uploadLogo(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0];
+  if (!file) return;
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5_000_000) {
+    error.value = "Elige un emblema JPG, PNG o WebP de hasta 5 MB.";
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => (logo.value = String(reader.result));
+  reader.readAsDataURL(file);
+}
 useHead({ title: "Gestionar torneos · Matchday" });
 </script>
 <template>
@@ -77,13 +89,19 @@ useHead({ title: "Gestionar torneos · Matchday" });
         ><form
           @submit.prevent="
             run(async () => {
-              tournamentId = await manager.createTournament(name, cap);
+              tournamentId = await manager.createTournament(name, cap, logo);
               name = '';
+              logo = null;
             })
           "
         >
           <label>Nombre<input v-model="name" required /></label
           ><label
+            >Emblema<input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              @change="uploadLogo" /></label
+          ><img v-if="logo" :src="logo" alt="Vista previa del emblema" class="logo-preview" /><label
             >Máximo de equipos por grupo<input
               v-model.number="cap"
               type="number"

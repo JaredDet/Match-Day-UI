@@ -9,7 +9,14 @@ const repository = useRepositories().teams,
 const manager = {
   teams: catalog.teams,
   async update(id: string, name: string, coach: string) {
-    await repository.update(id, { name, head_coach_name: coach });
+    await repository.update(id, {
+      name,
+      head_coach_name: coach,
+      crest: crest.value,
+      city: city.value,
+      stadium_name: stadium.value,
+      founded_year: foundedYear.value,
+    });
     await catalog.refresh();
     await loadTeam();
   },
@@ -26,6 +33,10 @@ const manager = {
 const teamId = ref(manager.teams.value[0]?.id ?? ""),
   name = ref(""),
   coach = ref(""),
+  crest = ref<string | null>(null),
+  city = ref(""),
+  stadium = ref(""),
+  foundedYear = ref<number | null>(null),
   playerId = ref(""),
   playerName = ref(""),
   position = ref<Position | "">(""),
@@ -39,6 +50,10 @@ async function loadTeam() {
   const team = await repository.get(teamId.value);
   name.value = team.name;
   coach.value = team.head_coach_name ?? "";
+  crest.value = team.crest;
+  city.value = team.city ?? "";
+  stadium.value = team.stadium_name ?? "";
+  foundedYear.value = team.founded_year;
   roster.value = team.players;
   captain.value = roster.value.find((player) => player.is_captain)?.id ?? "";
   resetPlayer();
@@ -56,6 +71,17 @@ function editPlayer(id: string) {
   playerName.value = player.name;
   position.value = player.preferred_position ?? "";
   shirt.value = player.preferred_shirt_number;
+}
+function uploadCrest(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0];
+  if (!file) return;
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5_000_000) {
+    error.value = "Elige un escudo JPG, PNG o WebP de hasta 5 MB.";
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => (crest.value = String(reader.result));
+  reader.readAsDataURL(file);
 }
 async function run(action: () => Promise<unknown>, success: string) {
   error.value = "";
@@ -102,7 +128,18 @@ useHead({ title: "Administrar equipos · Matchday" });
         >
           <label>Nombre<input v-model="name" required /></label
           ><label>Director técnico<input v-model="coach" required /></label
-          ><button class="primary">Guardar equipo</button>
+          ><label>Ciudad<input v-model="city" maxlength="100" /></label
+          ><label>Estadio<input v-model="stadium" maxlength="200" /></label
+          ><label
+            >Año de fundación<input v-model.number="foundedYear" type="number" min="1800" /></label
+          ><label
+            >Escudo<input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              @change="uploadCrest" /></label
+          ><TeamBadge v-if="crest" :name="name" :src="crest" /> ><button class="primary">
+            Guardar equipo
+          </button>
         </form>
         <label
           >Capitán<AppSelect v-model="captain"

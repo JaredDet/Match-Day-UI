@@ -82,6 +82,12 @@ useSeoMeta(() => ({
         { label: tournament.name },
       ]"
     />
+    <AppImage
+      v-if="tournament.logo"
+      class="tournament-detail-logo"
+      :src="tournament.logo"
+      :alt="`Emblema de ${tournament.name}`"
+    />
     <PageHeading
       :title="tournament.name"
       :kicker="`${tournament.country} · ${tournament.category}`"
@@ -277,6 +283,14 @@ useSeoMeta(() => ({
 </template>
 
 <style scoped>
+.tournament-detail-logo {
+  width: 96px;
+  height: 96px;
+  margin: 18px 0;
+}
+.tournament-detail-logo :deep(img) {
+  object-fit: contain;
+}
 html[data-theme="light"] main,
 html[data-theme="light"] .competition-page,
 html[data-theme="light"] .content-heading,

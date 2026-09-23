@@ -250,9 +250,7 @@ useHead({ title: "Matchday · La jornada" });
           </div>
           <div class="fixture">
             <div class="team">
-              <span class="crest" :style="{ '--team-color': teamColor(match.home_team.name) }">{{
-                initials(match.home_team.name)
-              }}</span>
+              <TeamBadge :name="match.home_team.name" :src="match.home_team.crest" />
               <h4>{{ match.home_team.name }}</h4>
             </div>
             <div class="score">
@@ -268,9 +266,7 @@ useHead({ title: "Matchday · La jornada" });
               >
             </div>
             <div class="team">
-              <span class="crest" :style="{ '--team-color': teamColor(match.away_team.name) }">{{
-                initials(match.away_team.name)
-              }}</span>
+              <TeamBadge :name="match.away_team.name" :src="match.away_team.crest" />
               <h4>{{ match.away_team.name }}</h4>
             </div>
           </div>
