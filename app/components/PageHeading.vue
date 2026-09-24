@@ -74,7 +74,7 @@ h1 > span {
   margin-bottom: 28px;
   padding: 18px 20px 18px 18px;
   border-radius: 18px;
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid var(--ui-border, rgba(255, 255, 255, 0.06));
   background: var(--ui-surface, rgba(15, 18, 22, 0.96));
 }

@@ -80,7 +80,12 @@ useSeoMeta(() => ({
       </div>
       <ShareButton :title="team.name" :text="`Plantilla, noticias y resultados de ${team.name}.`" />
     </div>
-    <p class="demo-caption">Plantilla, resultados y estadísticas del equipo</p>
+    <div class="team-tools">
+      <p class="demo-caption">Plantilla, resultados y estadísticas del equipo</p>
+      <NuxtLink :to="`/teams/${team.id}/formations`" class="text-action"
+        >Gestionar formaciones →</NuxtLink
+      >
+    </div>
     <nav class="entity-tabs" aria-label="Secciones del equipo">
       <button
         v-for="item in tabs"
@@ -268,6 +273,12 @@ useSeoMeta(() => ({
 </template>
 
 <style scoped>
+.team-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
 html[data-theme="light"] main,
 html[data-theme="light"] .competition-page,
 html[data-theme="light"] .entity-heading,

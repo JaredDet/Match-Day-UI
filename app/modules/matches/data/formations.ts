@@ -18,3 +18,16 @@ export function demoPositions(formation: string, variant?: "open" | "closed") {
   if (!profile) throw new Error(`Missing demo formation: ${formation}`);
   return numbers.map((number, index) => ({ number, y: profile[index]! }));
 }
+
+export type FormationPosition = { slot: number; x: number; y: number };
+
+export function formationPositions(formation: string): FormationPosition[] {
+  const lines = [1, ...formation.split("-").map(Number)];
+  return lines.flatMap((count, line) =>
+    Array.from({ length: count }, (_, index) => ({
+      slot: lines.slice(0, line).reduce((total, value) => total + value, 0) + index + 1,
+      x: 6 + Math.round((line * 38) / Math.max(lines.length - 1, 1)),
+      y: Math.round(((index + 1) * 100) / (count + 1)),
+    })),
+  );
+}

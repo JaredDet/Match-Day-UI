@@ -21,6 +21,11 @@ if (!match.value)
     statusMessage: "Partido no encontrado",
   });
 const matchTitle = `${match.value!.home_team.name} vs. ${match.value!.away_team.name}`;
+const isBreak = computed(
+  () =>
+    match.value?.current_period === "halftime" ||
+    match.value?.current_period === "extra_time_halftime",
+);
 const matchDescription = `Resultado, eventos, formaciones y estadísticas de ${matchTitle}.`;
 useSeoMeta({
   title: `${matchTitle} · Matchday`,
@@ -53,7 +58,7 @@ useSeoMeta({
           year: "numeric",
         })
       }}
-      · {{ time(match.scheduled_at) }} · Santiago
+      <template v-if="!isBreak"> · {{ time(match.scheduled_at) }}</template> · Santiago
     </p>
     <article class="match-card detail-summary" :class="{ 'is-live': match.status === 'live' }">
       <div class="card-top">
@@ -511,8 +516,21 @@ h1 > span {
   color: var(--ui-text, #fff);
 }
 .match-page-heading {
+  position: relative;
   margin: 22px 0;
+  padding: 0 132px;
   text-align: center;
+}
+.match-page-heading :deep(.share-control) {
+  position: absolute;
+  top: 8px;
+  right: 0;
+}
+.match-page-heading :deep(.share-control small) {
+  position: absolute;
+  top: calc(100% + 7px);
+  right: 0;
+  white-space: nowrap;
 }
 .match-page-heading h1 {
   font-size: 24px;
@@ -547,6 +565,27 @@ h1 > span {
   }
   .match-page-heading h1 {
     font-size: 20px;
+  }
+  .match-page-heading {
+    padding: 0 50px;
+  }
+  .match-page-heading :deep(.share-control) {
+    top: 5px;
+  }
+  .match-page-heading :deep(.share-control button) {
+    width: 42px;
+    padding: 0;
+  }
+  .match-page-heading :deep(.share-control button span) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
   .detail-date {
     font-size: 10px;

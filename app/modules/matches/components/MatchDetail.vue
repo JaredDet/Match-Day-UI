@@ -16,7 +16,16 @@ type Team = {
   name: string;
   formation: string | null;
   formation_variant?: "open" | "closed";
-  positions: { number: number; y: number }[];
+  positions: { number: number; x: number; y: number }[];
+  lineup?: Array<{
+    player_id: string;
+    player_name: string;
+    shirt_number: number;
+    role: string;
+    is_captain: boolean;
+    position_x: number | null;
+    position_y: number | null;
+  }>;
   goals: Goal[];
   penalty_score?: number;
 };
@@ -33,7 +42,7 @@ const props = defineProps<{
 }>();
 const squads = computed(() =>
   [props.match.home_team, props.match.away_team].map((team, side) => {
-    const names =
+    const demoNames =
       side === 0
         ? [
             "C. Herrera",
@@ -69,17 +78,31 @@ const squads = computed(() =>
             "B. Jara",
             "A. Ramos",
           ];
-    const numbers = [1, 2, 4, 5, 3, 6, 8, 10, 7, 9, 11, 12, 14, 16, 18];
+    const demoNumbers = [1, 2, 4, 5, 3, 6, 8, 10, 7, 9, 11, 12, 14, 16, 18];
+    const lineup = team.lineup?.length
+      ? team.lineup
+      : demoNames.map((player_name, index) => ({
+          player_id: String(index),
+          player_name,
+          shirt_number: demoNumbers[index]!,
+          role: index < 11 ? "starter" : "substitute",
+          is_captain: index === 2,
+          position_x: null,
+          position_y: null,
+        }));
+    const starters = lineup.filter((player) => player.role === "starter");
+    const substitutes = lineup.filter((player) => player.role === "substitute");
     const formation = team.formation || (side === 0 ? "4-3-3" : "4-2-3-1");
     const lines = [1, ...formation.split("-").map(Number)];
     let index = 0;
     const players = lines.flatMap((count, line) =>
       Array.from({ length: count }, () => {
         const i = index++;
-        const x = 6 + line * (38 / (lines.length - 1));
+        const stored = starters[i];
+        const x = stored?.position_x ?? 6 + line * (38 / (lines.length - 1));
         return {
-          name: names[i]!,
-          number: numbers[i]!,
+          name: stored?.player_name ?? demoNames[i]!,
+          number: stored?.shirt_number ?? demoNumbers[i]!,
           role:
             line === 0
               ? "Portero"
@@ -88,13 +111,17 @@ const squads = computed(() =>
                 : line === lines.length - 1
                   ? "Delantero"
                   : "Mediocampista",
-          captain: i === 2,
+          captain: stored?.is_captain ?? i === 2,
           x: side === 0 ? x : 100 - x,
           y: Math.max(
             8,
             Math.min(
               92,
-              team.positions.find((position) => position.number === numbers[i])?.y ?? 50,
+              stored?.position_y ??
+                team.positions.find(
+                  (position) => position.number === (stored?.shirt_number ?? demoNumbers[i]),
+                )?.y ??
+                50,
             ),
           ),
         };
@@ -107,7 +134,10 @@ const squads = computed(() =>
       side,
       coach: side === 0 ? "Ricardo Valdés" : "Martín Acuña",
       color: side === 0 ? "#282c30" : "#356d96",
-      substitutes: names.slice(11).map((name, i) => ({ name, number: numbers[i + 11] })),
+      substitutes: substitutes.map((player) => ({
+        name: player.player_name,
+        number: player.shirt_number,
+      })),
     };
   }),
 );

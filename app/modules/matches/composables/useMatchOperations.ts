@@ -8,6 +8,8 @@ import type {
 } from "~/modules/matches/types/operations";
 import type { Match, Period } from "~/modules/matches/utils/matches";
 import type { TeamPlayer } from "~/modules/teams/types/teams";
+import type { FormationPosition } from "~/modules/matches/data/formations";
+import type { TeamFormation } from "~/modules/teams/types/formations";
 
 type ApiMatch = Match & {
   events?: Array<Record<string, unknown>>;
@@ -20,6 +22,10 @@ export function useMatchOperations() {
     catalog = useMatches();
   const details = useState<Record<string, ApiMatch>>("managed-match-details", () => ({}));
   const rosters = useState<Record<string, TeamPlayer[]>>("managed-team-rosters", () => ({}));
+  const formations = useState<Record<string, TeamFormation[]>>(
+    "managed-team-formations",
+    () => ({}),
+  );
   const matches = computed(() =>
     catalog.matches.value.map((item) => details.value[item.id] ?? item),
   );
@@ -75,8 +81,12 @@ export function useMatchOperations() {
     await Promise.all(
       (["home", "away"] as Side[]).map(async (side) => {
         const teamId = match[`${side}_team`].id;
-        if (!rosters.value[teamId])
-          rosters.value[teamId] = (await repositories.teams.get(teamId)).players;
+        const [team, teamFormations] = await Promise.all([
+          repositories.teams.get(teamId),
+          repositories.teams.listFormations(teamId),
+        ]);
+        rosters.value[teamId] = team.players;
+        formations.value[teamId] = teamFormations;
       }),
     );
     return operations.value[id]!;
@@ -88,19 +98,27 @@ export function useMatchOperations() {
     await refresh(id);
     return id;
   }
-  async function lineup(id: string, side: Side, players: string[]) {
+  async function lineup(
+    id: string,
+    side: Side,
+    players: string[],
+    shape: string,
+    positions: FormationPosition[],
+  ) {
     if (players.length !== 11 || new Set(players).size !== 11)
       throw new Error("Selecciona once titulares distintos.");
     const all = roster(details.value[id]![`${side}_team`].id);
     const shirt = (player: TeamPlayer, index: number) => player.preferred_shirt_number ?? index + 1;
     await repositories.matches.command(id, `lineups/${side}/`, "PUT", {
-      formation: "4-3-3",
+      formation: shape,
       players: players.map((playerId, index) => ({
         player_id: playerId,
         shirt_number: shirt(
           all.find((player) => player.id === playerId)!,
           index,
         ),
+        position_x: positions[index]?.x,
+        position_y: positions[index]?.y,
       })),
       substitutes: all
         .filter((player) => !players.includes(player.id))
@@ -108,6 +126,25 @@ export function useMatchOperations() {
           player_id: player.id,
           shirt_number: shirt(player, players.length + index),
         })),
+    });
+    await refresh(id);
+  }
+  async function changeFormation(
+    id: string,
+    side: Side,
+    shape: string,
+    positions: FormationPosition[],
+  ) {
+    const active = (details.value[id]?.[`${side}_team`].lineup ?? []).filter(
+      (player) => player.is_on_field && !player.is_sent_off,
+    );
+    await repositories.matches.command(id, `lineups/${side}/formation/`, "PATCH", {
+      formation: shape,
+      positions: active.map((player, index) => ({
+        player_id: player.player_id,
+        position_x: positions[index]?.x,
+        position_y: positions[index]?.y,
+      })),
     });
     await refresh(id);
   }
@@ -197,9 +234,11 @@ export function useMatchOperations() {
     matches,
     operations,
     roster,
+    formations,
     create,
     prepare,
     lineup,
+    changeFormation,
     activePlayers,
     period,
     event,

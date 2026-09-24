@@ -6,6 +6,7 @@ import type {
   TeamSummary,
 } from "~/modules/teams/types/teams";
 import type { TeamRegistrationDraft } from "~/modules/teams/types/registration";
+import type { TeamFormation, TeamFormationDraft } from "~/modules/teams/types/formations";
 
 export interface TeamRepository {
   list(search?: string): Promise<TeamSummary[]>;
@@ -26,4 +27,8 @@ export interface TeamRepository {
     player: Omit<TeamPlayer, "id" | "is_captain">,
   ): Promise<void>;
   setCaptain(teamId: string, playerId: string): Promise<void>;
+  listFormations(teamId: string): Promise<TeamFormation[]>;
+  createFormation(teamId: string, draft: TeamFormationDraft): Promise<string>;
+  updateFormation(teamId: string, formationId: string, draft: TeamFormationDraft): Promise<void>;
+  deleteFormation(teamId: string, formationId: string): Promise<void>;
 }

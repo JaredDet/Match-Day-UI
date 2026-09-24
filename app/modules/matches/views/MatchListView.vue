@@ -23,6 +23,15 @@ const filter = useState("matchday-filter", () => "all");
 const search = useState("matchday-search", () => "");
 const favoritesOnly = useState("matchday-favorites-only", () => false);
 const favorites = useState<string[]>("matchday-favorites", () => []);
+const route = useRoute();
+watch(
+  () => route.query.view,
+  (view) => {
+    favoritesOnly.value = view === "favorites";
+    if (favoritesOnly.value) filter.value = "all";
+  },
+  { immediate: true },
+);
 
 const tabs = [
   { id: "all", label: "Todos" },
@@ -46,7 +55,7 @@ const dated = computed(() =>
   ),
 );
 const visible = computed(() =>
-  dated.value
+  (favoritesOnly.value ? matches.value : dated.value)
     .filter(
       (m) =>
         (filter.value === "all" || m.status === filter.value) &&
@@ -55,13 +64,22 @@ const visible = computed(() =>
           .toLocaleLowerCase()
           .includes(search.value.toLocaleLowerCase()),
     )
-    .sort(
-      (a, b) =>
-        ({ live: 0, scheduled: 1, finished: 2 })[a.status] -
-          { live: 0, scheduled: 1, finished: 2 }[b.status] ||
-        a.scheduled_at.localeCompare(b.scheduled_at),
+    .sort((a, b) =>
+      favoritesOnly.value
+        ? favorites.value.indexOf(b.id) - favorites.value.indexOf(a.id)
+        : { live: 0, scheduled: 1, finished: 2 }[a.status] -
+            { live: 0, scheduled: 1, finished: 2 }[b.status] ||
+          a.scheduled_at.localeCompare(b.scheduled_at),
     ),
 );
+function favoriteDate(value: string) {
+  return new Date(value).toLocaleDateString("es-CL", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone: "America/Santiago",
+  });
+}
 const nextMatchDate = computed(
   () =>
     matches.value
@@ -77,6 +95,7 @@ function showMatchDate(date: string) {
   search.value = "";
   filter.value = "all";
   favoritesOnly.value = false;
+  if (route.query.view) navigateTo({ path: "/" });
   selectedDate.value = date;
 }
 const liveCount = computed(() => dated.value.filter((m) => m.status === "live").length);
@@ -151,14 +170,23 @@ onMounted(() => {
 useHead({ title: "Matchday · La jornada" });
 </script>
 <template>
-  <main>
+  <main :class="{ 'favorites-page': favoritesOnly }">
     <section class="intro" aria-label="Tu centro de partidos">
       <div>
-        <span class="eyebrow">FÚTBOL. SIN DISTRACCIONES.</span>
-        <h1>El juego está aquí<span>.</span></h1>
-        <p>Todos los partidos. Toda la emoción.</p>
+        <span class="eyebrow">{{
+          favoritesOnly ? "TU SELECCIÓN" : "FÚTBOL. SIN DISTRACCIONES."
+        }}</span>
+        <h1>{{ favoritesOnly ? "Partidos que sigues" : "El juego está aquí" }}<span>.</span></h1>
+        <p>
+          {{
+            favoritesOnly
+              ? "Tus encuentros guardados, reunidos en un solo lugar."
+              : "Todos los partidos. Toda la emoción."
+          }}
+        </p>
       </div>
       <button
+        v-if="!favoritesOnly"
         class="live-summary"
         @click="
           filter = 'live';
@@ -181,7 +209,7 @@ useHead({ title: "Matchday · La jornada" });
         <div>
           <h2 id="matches-title">
             {{ favoritesOnly ? "Mis favoritos" : "La jornada"
-            }}<span class="count">{{ dated.length }}</span>
+            }}<span class="count">{{ visible.length }}</span>
           </h2>
         </div>
         <label class="search"
@@ -195,8 +223,13 @@ useHead({ title: "Matchday · La jornada" });
             aria-label="Buscar un equipo"
         /></label>
       </div>
-      <MatchCalendar v-model="selectedDate" :today="today" :matches="matches" />
-      <div class="filter-row">
+      <MatchCalendar
+        v-if="!favoritesOnly"
+        v-model="selectedDate"
+        :today="today"
+        :matches="matches"
+      />
+      <div v-if="!favoritesOnly" class="filter-row">
         <div class="tabs" aria-label="Estado del partido">
           <button
             v-for="tab in tabs"
@@ -211,12 +244,20 @@ useHead({ title: "Matchday · La jornada" });
         </div>
         <span class="timezone">Hora de Santiago · GMT−3 / GMT−4</span>
       </div>
-      <div class="prototype-note">
+      <div v-if="!favoritesOnly" class="prototype-note">
         <span class="green-dot" /> Demo · Partidos y resultados ficticios
+      </div>
+      <div v-else class="favorites-summary">
+        <StarSolidIcon aria-hidden="true" />
+        <div>
+          <strong>{{ favorites.length }}</strong
+          ><span>{{ favorites.length === 1 ? "partido guardado" : "partidos guardados" }}</span>
+        </div>
+        <button @click="showMatchDate(selectedDate)">Explorar la jornada</button>
       </div>
 
       <div class="day-heading">
-        <h3>{{ dateTitle }}</h3>
+        <h3>{{ favoritesOnly ? "Guardados recientemente" : dateTitle }}</h3>
         <span>{{ visible.length }} partidos</span>
       </div>
 
@@ -247,6 +288,9 @@ useHead({ title: "Matchday · La jornada" });
                 aria-hidden="true"
               />
             </button>
+            <time v-if="favoritesOnly" class="favorite-date" :datetime="match.scheduled_at">
+              {{ favoriteDate(match.scheduled_at) }} · {{ time(match.scheduled_at) }}
+            </time>
           </div>
           <div class="fixture">
             <div class="team">
@@ -324,21 +368,28 @@ useHead({ title: "Matchday · La jornada" });
         <span class="empty-icon">◇</span>
         <h3>
           {{
-            !dated.length
-              ? "No hay partidos programados para este día"
-              : "No hay partidos con estos filtros"
+            favoritesOnly && !favorites.length
+              ? "Todavía no guardas partidos"
+              : !dated.length
+                ? "No hay partidos programados para este día"
+                : "No hay partidos con estos filtros"
           }}
         </h3>
         <p>
           {{
-            !dated.length
-              ? nextMatchDate
-                ? "Puedes ir a la próxima jornada con partidos o elegir otra fecha."
-                : "Elige otra fecha para consultar sus partidos."
-              : "Cambia los filtros o borra la búsqueda para ver los encuentros de esta jornada."
+            favoritesOnly && !favorites.length
+              ? "Usa la estrella de un partido para encontrarlo luego en esta sección."
+              : !dated.length
+                ? nextMatchDate
+                  ? "Puedes ir a la próxima jornada con partidos o elegir otra fecha."
+                  : "Elige otra fecha para consultar sus partidos."
+                : "Cambia los filtros o borra la búsqueda para ver los encuentros de esta jornada."
           }}
         </p>
-        <button v-if="!dated.length && nextMatchDate" @click="showMatchDate(nextMatchDate)">
+        <button v-if="favoritesOnly" @click="showMatchDate(selectedDate)">
+          Ver todos los partidos
+        </button>
+        <button v-else-if="!dated.length && nextMatchDate" @click="showMatchDate(nextMatchDate)">
           Ir a la próxima jornada con partidos
           <AnimatedHeroIcon :icon="ArrowUpRightIcon" motion="arrow" class="ui-icon inline-icon" />
         </button>
@@ -487,6 +538,106 @@ main {
   align-items: center;
   justify-content: space-between;
   padding: 47px 0 37px;
+}
+.favorites-page .intro {
+  position: relative;
+  overflow: hidden;
+  min-height: 250px;
+  background:
+    radial-gradient(
+      circle at 88% 30%,
+      color-mix(in srgb, var(--accent) 24%, transparent),
+      transparent 32%
+    ),
+    linear-gradient(135deg, var(--surface), color-mix(in srgb, var(--surface) 82%, var(--accent)));
+}
+.favorites-page .intro::after {
+  content: "★";
+  position: absolute;
+  right: 8%;
+  top: 50%;
+  transform: translateY(-52%) rotate(8deg);
+  color: color-mix(in srgb, var(--accent) 18%, transparent);
+  font-size: clamp(120px, 18vw, 240px);
+  line-height: 1;
+}
+.favorites-summary {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 14px;
+  margin: 24px 0 30px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.favorites-summary > svg {
+  width: 28px;
+  color: var(--accent);
+}
+.favorites-summary div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.favorites-summary strong {
+  font-size: 24px;
+  color: var(--accent);
+}
+.favorites-summary span {
+  color: var(--muted);
+}
+.favorites-page .match-grid {
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+.favorites-page .match-card {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.4fr) 1fr;
+  align-items: stretch;
+  min-height: 170px;
+  border-left: 3px solid var(--accent);
+}
+.favorites-page .match-card .card-top {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  border-right: 1px solid var(--border);
+}
+.favorites-page .match-card .fixture {
+  grid-column: 2;
+  padding: 26px 36px;
+}
+.favorites-page .match-card .scorers {
+  grid-column: 2;
+}
+.favorite-date {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+  text-transform: capitalize;
+}
+@media (max-width: 700px) {
+  .favorites-page .match-card {
+    display: block;
+  }
+  .favorites-page .match-card .card-top {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    border-right: 0;
+  }
+  .favorites-summary {
+    grid-template-columns: auto 1fr;
+  }
+  .favorites-summary > button {
+    grid-column: 1 / -1;
+  }
 }
 .eyebrow {
   font-size: 9px;

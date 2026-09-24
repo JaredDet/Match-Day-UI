@@ -64,6 +64,7 @@ const selectedLabel = computed(
       <ChevronDownIcon class="select-chevron" :class="{ open }" aria-hidden="true" />
     </ListboxButton>
     <TransitionRoot
+      as="template"
       enter="options-enter"
       enter-from="options-enter-from"
       enter-to="options-enter-to"

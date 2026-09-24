@@ -4,8 +4,8 @@ import AnimatedHeroIcon from "~/components/AnimatedHeroIcon.vue";
 import { MoonIcon, StarIcon, SunIcon } from "@heroicons/vue/24/outline";
 
 const route = useRoute();
-const favoritesOnly = useState("matchday-favorites-only", () => false);
 const themeMode = useState("matchday-theme", () => "dark");
+const favoritesOnly = computed(() => route.path === "/" && route.query.view === "favorites");
 
 const isDarkTheme = computed(() => themeMode.value === "dark");
 
@@ -32,8 +32,7 @@ function toggleTheme() {
 }
 
 async function showHome(onlyFavorites: boolean) {
-  favoritesOnly.value = onlyFavorites;
-  await navigateTo("/");
+  await navigateTo({ path: "/", query: onlyFavorites ? { view: "favorites" } : {} });
 }
 </script>
 <template>

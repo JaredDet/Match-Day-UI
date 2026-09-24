@@ -43,7 +43,13 @@ export class ApiMatchRepository implements MatchRepository {
       ...detail[`${side}_team`],
       score: detail[`${side}_team`].goals,
       goals: goals(side),
-      positions: [],
+      positions: (detail[`${side}_team`].lineup ?? [])
+        .filter((player: any) => player.role === "starter")
+        .map((player: any) => ({
+          number: player.shirt_number,
+          x: player.position_x,
+          y: player.position_y,
+        })),
     });
     return {
       ...detail,

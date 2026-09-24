@@ -8,6 +8,7 @@ import type {
   TeamSummary,
 } from "~/modules/teams/types/teams";
 import type { TeamRegistrationDraft } from "~/modules/teams/types/registration";
+import type { TeamFormation, TeamFormationDraft } from "~/modules/teams/types/formations";
 
 const navigationHeaders = () => ({
   "X-Navigation-Intent": "detail-view",
@@ -116,6 +117,31 @@ export class ApiTeamRepository implements TeamRepository {
     return this.http.request<void>(`teams/${teamId}/captain/`, {
       method: "PUT",
       body: { player_id: playerId },
+    });
+  }
+
+  listFormations(teamId: string) {
+    return this.http.request<TeamFormation[]>(`teams/${teamId}/formations/`);
+  }
+
+  async createFormation(teamId: string, draft: TeamFormationDraft) {
+    const result = await this.http.request<{ id: string }>(`teams/${teamId}/formations/`, {
+      method: "POST",
+      body: draft,
+    });
+    return result.id;
+  }
+
+  updateFormation(teamId: string, formationId: string, draft: TeamFormationDraft) {
+    return this.http.request<void>(`teams/${teamId}/formations/${formationId}/`, {
+      method: "PUT",
+      body: draft,
+    });
+  }
+
+  deleteFormation(teamId: string, formationId: string) {
+    return this.http.request<void>(`teams/${teamId}/formations/${formationId}/`, {
+      method: "DELETE",
     });
   }
 }

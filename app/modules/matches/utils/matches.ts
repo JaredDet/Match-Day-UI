@@ -21,7 +21,7 @@ export type Team = {
   score: number;
   formation: string | null;
   formation_variant?: "open" | "closed";
-  positions: { number: number; y: number }[];
+  positions: { number: number; x: number; y: number }[];
   penalty_score?: number;
   goals: Goal[];
 };

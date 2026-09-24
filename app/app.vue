@@ -4,7 +4,6 @@ import AppFooter from "~/components/AppFooter.vue";
 import { useNavigationTracking } from "~/modules/recommendations/composables/useNavigationTracking";
 
 useNavigationTracking();
-const route = useRoute();
 const navigating = ref(false);
 const nuxtApp = useNuxtApp();
 nuxtApp.hook("page:start", () => {
@@ -30,15 +29,7 @@ useSeoMeta({
     <NuxtLoadingIndicator color="var(--accent)" :height="3" />
     <a class="skip-link" href="#main-content">Saltar al contenido principal</a>
     <AppHeader />
-    <div
-      id="main-content"
-      tabindex="-1"
-      :aria-busy="navigating"
-      :aria-label="`Contenido de ${route.path}`"
-    >
-      <span class="sr-only" aria-live="polite">{{
-        navigating ? "Cargando página" : "Página cargada"
-      }}</span>
+    <div id="main-content" tabindex="-1" :aria-busy="navigating">
       <NuxtPage :transition="{ name: 'page' }" />
     </div>
     <AppFooter />
