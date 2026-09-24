@@ -20,6 +20,16 @@
   "dependencies": {
     "@headlessui/vue": "^1.7.23",
     "@heroicons/vue": "^2.2.0",
+    "@tiptap/core": "^3.31.3",
+    "@tiptap/extension-bold": "^3.31.3",
+    "@tiptap/extension-character-count": "^3.31.3",
+    "@tiptap/extension-document": "^3.31.3",
+    "@tiptap/extension-hard-break": "^3.31.3",
+    "@tiptap/extension-italic": "^3.31.3",
+    "@tiptap/extension-paragraph": "^3.31.3",
+    "@tiptap/extension-text": "^3.31.3",
+    "@tiptap/pm": "^3.31.3",
+    "@tiptap/vue-3": "^3.31.3",
     "nuxt": "^4.5.2",
     "vue": "^3.5.42",
     "vue-router": "^5.3.1"

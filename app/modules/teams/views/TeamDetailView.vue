@@ -78,9 +78,9 @@ useSeoMeta(() => ({
           {{ [team.city, team.stadium_name, team.founded_year].filter(Boolean).join(" · ") }}
         </p>
       </div>
+      <ShareButton :title="team.name" :text="`Plantilla, noticias y resultados de ${team.name}.`" />
     </div>
     <p class="demo-caption">Plantilla, resultados y estadísticas del equipo</p>
-    <ShareButton :title="team.name" :text="`Plantilla, noticias y resultados de ${team.name}.`" />
     <nav class="entity-tabs" aria-label="Secciones del equipo">
       <button
         v-for="item in tabs"
@@ -400,6 +400,11 @@ h2 {
   flex: 1;
   min-width: 0;
 }
+.entity-heading :deep(.share-control) {
+  z-index: 1;
+  align-self: flex-start;
+  margin-left: auto;
+}
 .entity-heading h1 {
   font-size: clamp(28px, 4vw, 44px);
   margin: 8px 0;
@@ -535,6 +540,17 @@ h2 {
   }
   .entity-heading h1 {
     font-size: clamp(24px, 6vw, 32px);
+  }
+  .entity-heading :deep(.share-control button) {
+    width: 44px;
+    padding: 0;
+  }
+  .entity-heading :deep(.share-control button span) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
   }
   .content-heading {
     align-items: flex-start;

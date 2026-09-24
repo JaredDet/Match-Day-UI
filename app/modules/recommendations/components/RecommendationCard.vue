@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type { Recommendation } from "~/modules/recommendations/types/recommendations";
-defineProps<{ item: Recommendation }>();
+import TeamBadge from "~/modules/teams/components/TeamBadge.vue";
+import { useTeams } from "~/modules/teams/composables/useTeams";
+const props = defineProps<{ item: Recommendation }>();
+const { teams } = useTeams();
 const labels = {
   news: "Noticia",
   match: "Partido",
@@ -8,12 +11,12 @@ const labels = {
   team: "Equipo",
   player: "Jugador",
 };
-const initials = (name?: string) =>
-  name
-    ?.split(" ")
-    .map((word) => word[0])
-    .join("")
-    .slice(0, 3) ?? "";
+const matchTeamNames = computed(() => {
+  if (props.item.homeTeam && props.item.awayTeam) return [props.item.homeTeam, props.item.awayTeam];
+  const names = props.item.title.split(/\s+[–-]\s+/);
+  return [names[0] ?? "Local", names[1] ?? "Visitante"];
+});
+const teamByName = (name: string) => teams.value.find((team) => team.name === name);
 </script>
 
 <template>
@@ -21,9 +24,9 @@ const initials = (name?: string) =>
     <NuxtLink :to="item.path" class="visual" tabindex="-1" aria-hidden="true">
       <AppImage v-if="item.image" :src="item.image" :alt="`Imagen de ${item.title}`" />
       <div v-else-if="item.kind === 'match'" class="match-visual">
-        <span>{{ initials(item.homeTeam) }}</span>
+        <TeamBadge :name="matchTeamNames[0]!" :src="teamByName(matchTeamNames[0]!)?.crest" />
         <strong>{{ item.homeScore }}<i>–</i>{{ item.awayScore }}</strong>
-        <span>{{ initials(item.awayTeam) }}</span>
+        <TeamBadge :name="matchTeamNames[1]!" :src="teamByName(matchTeamNames[1]!)?.crest" />
       </div>
       <span v-else class="fallback-mark">M</span>
       <b>{{ labels[item.kind] }}</b>
@@ -104,17 +107,10 @@ const initials = (name?: string) =>
   inset: 0;
   background: repeating-linear-gradient(90deg, transparent 0 48px, #ffffff07 49px 50px);
 }
-.match-visual span {
+.match-visual :deep(.team-badge) {
   z-index: 1;
-  display: grid;
-  place-items: center;
   width: 58px;
   height: 58px;
-  border: 2px solid #ffffffc0;
-  border-radius: 50%;
-  background: #6a8c50;
-  color: #fff;
-  font-weight: 800;
 }
 .match-visual strong {
   z-index: 1;

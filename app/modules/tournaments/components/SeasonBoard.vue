@@ -1,8 +1,9 @@
 ﻿<script setup lang="ts">
 import { useTournamentManagement } from "~/modules/tournaments/composables/useTournamentManagement";
 import { useTeams } from "~/modules/teams/composables/useTeams";
+import TeamBadge from "~/modules/teams/components/TeamBadge.vue";
 const props = defineProps<{ seasonId: string; tab?: string }>();
-const { phases, matches, standings } = useTournamentManagement(),
+const { phases, standings } = useTournamentManagement(),
   { teamById } = useTeams();
 const visible = computed(() =>
   phases.value.filter(
@@ -13,7 +14,6 @@ const visible = computed(() =>
         (props.tab === "groups" ? p.kind === "groups" : p.kind !== "groups")),
   ),
 );
-const findMatch = (id: string) => matches.value.find((m) => m.id === id);
 </script>
 <template>
   <div class="season-board">
@@ -22,13 +22,11 @@ const findMatch = (id: string) => matches.value.find((m) => m.id === id);
       prepararlas desde la gestión del torneo.
     </p>
     <section v-for="phase in visible" :key="phase.id" class="phase">
-      <h2>{{ phase.name }}</h2>
-      <p>
-        {{ phase.status === "finished" ? "Finalizada" : "En preparación o en juego"
-        }}<span v-if="phase.generated"> · Estructura bloqueada</span>
-      </p>
       <div v-for="group in phase.groups" :key="group.id" class="group">
-        <h3>Grupo {{ group.name }}</h3>
+        <h3>
+          <span>Grupo {{ group.name }}</span
+          ><small>{{ group.teams.length }} equipos</small>
+        </h3>
         <div class="scroll">
           <table>
             <caption>
@@ -53,8 +51,12 @@ const findMatch = (id: string) => matches.value.find((m) => m.id === id);
             </thead>
             <tbody>
               <tr v-for="row in standings(phase.id, group.id)" :key="row.id">
-                <th>
-                  <NuxtLink :to="`/teams/${row.id}`">{{ teamById(row.id)?.name }}</NuxtLink
+                <th scope="row">
+                  <NuxtLink :to="`/teams/${row.id}`"
+                    ><TeamBadge
+                      :name="teamById(row.id)?.name ?? 'Equipo'"
+                      :src="teamById(row.id)?.crest"
+                    />{{ teamById(row.id)?.name }}</NuxtLink
                   ><small v-if="row.tied"> · Desempate pendiente</small>
                 </th>
                 <td>{{ row.played }}</td>
@@ -72,28 +74,6 @@ const findMatch = (id: string) => matches.value.find((m) => m.id === id);
           </table>
         </div>
       </div>
-      <p v-if="phase.generated && !phase.fixtures.length">
-        Esperando los ganadores de la ronda anterior.
-      </p>
-      <ul>
-        <li v-for="fixture in phase.fixtures" :key="fixture.match">
-          <NuxtLink :to="`/matches/${fixture.match}`"
-            >{{ findMatch(fixture.match)?.home_team.name }}
-            {{ findMatch(fixture.match)?.home_team.score }} –
-            {{ findMatch(fixture.match)?.away_team.score }}
-            {{ findMatch(fixture.match)?.away_team.name }}</NuxtLink
-          ><span>
-            ·
-            {{
-              findMatch(fixture.match)?.status === "finished"
-                ? "Finalizado"
-                : findMatch(fixture.match)?.status === "live"
-                  ? "En juego"
-                  : "Programado"
-            }}</span
-          >
-        </li>
-      </ul>
     </section>
   </div>
 </template>
@@ -105,15 +85,31 @@ const findMatch = (id: string) => matches.value.find((m) => m.id === id);
 }
 .phase {
   display: grid;
-  gap: 16px;
-  background: var(--surface);
-  padding: 24px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  gap: 20px;
 }
 .group {
   display: grid;
-  gap: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.group h3 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-bg);
+  color: var(--accent);
+  font-size: 15px;
+}
+.group h3 small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 400;
 }
 .scroll {
   overflow-x: auto;
@@ -126,7 +122,8 @@ table {
 caption {
   text-align: left;
   color: var(--muted);
-  padding: 8px 0;
+  padding: 14px 22px 8px;
+  font-size: 11px;
 }
 td,
 th {
@@ -136,15 +133,21 @@ th {
 }
 th:first-child {
   text-align: left;
-  min-width: 180px;
+  min-width: 240px;
+  padding-left: 22px;
 }
-a {
+th a {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-color);
+}
+tbody tr:nth-child(-n + 2) th {
+  box-shadow: inset 3px 0 var(--accent);
+}
+tbody tr:nth-child(-n + 2) th a,
+td:last-child strong {
   color: var(--accent);
-}
-ul {
-  display: grid;
-  gap: 12px;
-  padding-left: 20px;
 }
 small {
   display: block;
@@ -152,5 +155,15 @@ small {
 }
 p {
   line-height: 1.6;
+}
+@media (max-width: 700px) {
+  th:first-child {
+    min-width: 190px;
+    padding-left: 14px;
+  }
+  td,
+  th {
+    padding: 10px;
+  }
 }
 </style>

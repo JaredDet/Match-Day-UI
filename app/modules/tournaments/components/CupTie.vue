@@ -1,9 +1,17 @@
 <script setup lang="ts">
 import TeamBadge from "~/modules/teams/components/TeamBadge.vue";
+import { useTeams } from "~/modules/teams/composables/useTeams";
 
-import { teamById } from "~/modules/teams/data/teams";
+import { teamById as demoTeamById } from "~/modules/teams/data/teams";
 import { type CupTie } from "~/modules/tournaments/data/competition";
-defineProps<{ tie: CupTie }>();
+const props = defineProps<{ tie: CupTie }>();
+const { teams } = useTeams();
+const resolveTeam = (id: string) => {
+  const realTeam = teams.value[Number(id)];
+  return realTeam ?? { ...demoTeamById(id), crest: null };
+};
+const homeTeam = computed(() => resolveTeam(props.tie.home));
+const awayTeam = computed(() => resolveTeam(props.tie.away));
 </script>
 <template>
   <article class="cup-tie">
@@ -15,9 +23,9 @@ defineProps<{ tie: CupTie }>();
           winner: tie.homeScore !== null && tie.homeScore! > tie.awayScore!,
         }"
       >
-        <NuxtLink :to="`/teams/${tie.home}`"
-          ><TeamBadge :name="teamById(tie.home).name" /><span>{{
-            teamById(tie.home).name
+        <NuxtLink :to="`/teams/${homeTeam.id}`"
+          ><TeamBadge :name="homeTeam.name" :src="homeTeam.crest" /><span>{{
+            homeTeam.name
           }}</span></NuxtLink
         ><strong>{{ tie.homeScore ?? "–" }}</strong>
       </div>
@@ -28,9 +36,9 @@ defineProps<{ tie: CupTie }>();
           winner: tie.homeScore !== null && tie.awayScore! > tie.homeScore!,
         }"
       >
-        <NuxtLink :to="`/teams/${tie.away}`"
-          ><TeamBadge :name="teamById(tie.away).name" /><span>{{
-            teamById(tie.away).name
+        <NuxtLink :to="`/teams/${awayTeam.id}`"
+          ><TeamBadge :name="awayTeam.name" :src="awayTeam.crest" /><span>{{
+            awayTeam.name
           }}</span></NuxtLink
         ><strong>{{ tie.awayScore ?? "–" }}</strong>
       </div>

@@ -2,6 +2,7 @@
 import PageHeading from "~/components/PageHeading.vue";
 import ManagementPanel from "~/components/ManagementPanel.vue";
 import AppSelect from "~/components/AppSelect.vue";
+import NewsContentEditor from "~/modules/news/components/NewsContentEditor.vue";
 import NewsParagraph from "~/modules/news/components/NewsParagraph.vue";
 import { useNewsManagement } from "~/modules/news/composables/useNewsManagement";
 import { newsDate } from "~/modules/news/data/news";
@@ -20,19 +21,13 @@ const selected = ref(""),
   message = ref(""),
   error = ref("");
 const cover = ref<string | null>(null);
-const contentEditor = ref<HTMLElement>();
-const contentLength = ref(0),
-  limitAttempted = ref(false),
-  boldActive = ref(false),
-  italicActive = ref(false);
-let editorSelection: Range | null = null;
+const contentLength = ref(0);
 const visible = computed(() =>
   items.value.filter((item) => filter.value === "all" || item.status === filter.value),
 );
 const previewParagraph = computed(
   () => content.value.split(/\n\s*\n/).find((paragraph) => newsPreview([paragraph])) ?? "",
 );
-const contentAtLimit = computed(() => contentLength.value >= MAX_CONTENT_LENGTH);
 const savedSnapshot = ref("");
 const formSnapshot = computed(() =>
   JSON.stringify([selected.value, title.value, team.value, content.value, cover.value]),
@@ -58,64 +53,6 @@ async function run(action: () => Promise<unknown>, success: string) {
     error.value = (exception as Error).message;
   }
 }
-function serializeEditor() {
-  const editor = contentEditor.value;
-  if (!editor) return;
-  const walk = (node: Node): string => {
-    if (node.nodeType === Node.TEXT_NODE)
-      return (node.textContent ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;");
-    if (!(node instanceof HTMLElement)) return "";
-    const children = [...node.childNodes].map(walk).join("");
-    if (["B", "STRONG"].includes(node.tagName)) return `<b>${children}</b>`;
-    if (["I", "EM"].includes(node.tagName)) return `<i>${children}</i>`;
-    if (node.tagName === "BR") return "\n";
-    if (["DIV", "P"].includes(node.tagName)) return `${children}\n`;
-    return children;
-  };
-  content.value = [...editor.childNodes]
-    .map(walk)
-    .join("")
-    .replace(/<i><b>([\s\S]*?)<\/b><\/i>/g, "<b><i>$1</i></b>")
-    .replace(/\n{3,}/g, "\n\n")
-    .replace(/\n+$/, "");
-  contentLength.value = (editor.innerText || editor.textContent || "").replace(/\n+$/, "").length;
-  if (contentLength.value < MAX_CONTENT_LENGTH) limitAttempted.value = false;
-}
-function removeEmptyFormatting() {
-  const editor = contentEditor.value;
-  if (!editor) return;
-  const selection = window.getSelection();
-  const emptyNodes = [...editor.querySelectorAll("b, strong, i, em")].reverse();
-  for (const node of emptyNodes) {
-    if (node.textContent || node.querySelector("br")) continue;
-    if (selection?.rangeCount && node.contains(selection.anchorNode)) {
-      const caret = document.createRange();
-      caret.setStartBefore(node);
-      caret.collapse(true);
-      selection.removeAllRanges();
-      selection.addRange(caret);
-    }
-    node.remove();
-  }
-  if (!(editor.innerText || editor.textContent || "").length) {
-    editor.innerHTML = "";
-    boldActive.value = false;
-    italicActive.value = false;
-  }
-}
-function handleEditorInput(event: InputEvent) {
-  if (event.inputType.startsWith("delete")) removeEmptyFormatting();
-  serializeEditor();
-  rememberSelection(false);
-}
-function renderEditor() {
-  if (!contentEditor.value) return;
-  contentEditor.value.innerHTML = content.value.replaceAll("\n", "<br>");
-  serializeEditor();
-}
 async function edit(id = "") {
   const item = id ? await get(id) : undefined;
   selected.value = id;
@@ -123,15 +60,12 @@ async function edit(id = "") {
   team.value = item?.team_id ?? "";
   content.value = item?.content.children.join("\n\n") ?? "";
   cover.value = item?.cover_image ?? null;
-  limitAttempted.value = false;
   error.value = "";
   message.value = "";
   await nextTick();
-  renderEditor();
   savedSnapshot.value = formSnapshot.value;
 }
 async function submit() {
-  serializeEditor();
   if (!contentLength.value) {
     error.value = "Escribe el contenido de la noticia antes de guardarla.";
     return;
@@ -152,124 +86,6 @@ async function submit() {
     );
     await edit();
   }, "Borrador guardado.");
-}
-function selectionInsideEditor() {
-  const editor = contentEditor.value,
-    selection = window.getSelection();
-  if (!editor || !selection?.rangeCount) return null;
-  const range = selection.getRangeAt(0);
-  return editor.contains(range.commonAncestorContainer) ? { selection, range } : null;
-}
-function rememberSelection(syncButtons = true) {
-  const current = selectionInsideEditor();
-  if (!current) return;
-  editorSelection = current.range.cloneRange();
-  if (syncButtons) {
-    boldActive.value = document.queryCommandState("bold");
-    italicActive.value = document.queryCommandState("italic");
-  }
-}
-function rememberKeyboardSelection(event: KeyboardEvent) {
-  const navigationKeys = [
-    "ArrowLeft",
-    "ArrowRight",
-    "ArrowUp",
-    "ArrowDown",
-    "Home",
-    "End",
-    "PageUp",
-    "PageDown",
-  ];
-  rememberSelection(navigationKeys.includes(event.key));
-}
-function restoreSelection() {
-  const selection = window.getSelection();
-  if (!selection || !editorSelection) return;
-  selection.removeAllRanges();
-  selection.addRange(editorSelection);
-}
-function applyFormat(command: "bold" | "italic") {
-  if (!contentEditor.value) return;
-  contentEditor.value.focus();
-  restoreSelection();
-  const current = selectionInsideEditor();
-  if (!current) return;
-  if (current.range.collapsed) {
-    if (command === "bold") boldActive.value = !boldActive.value;
-    else italicActive.value = !italicActive.value;
-  } else {
-    document.execCommand(command, false);
-    boldActive.value = document.queryCommandState("bold");
-    italicActive.value = document.queryCommandState("italic");
-  }
-  rememberSelection(false);
-  serializeEditor();
-}
-function selectedTextLength() {
-  return selectionInsideEditor()?.selection.toString().length ?? 0;
-}
-function leaveInactiveFormat(command: "bold" | "italic") {
-  const current = selectionInsideEditor();
-  const editor = contentEditor.value;
-  if (!current || !editor) return;
-  const tags = command === "bold" ? ["B", "STRONG"] : ["I", "EM"];
-  let node: Node | null = current.range.startContainer;
-  while (node && node !== editor) {
-    if (node instanceof HTMLElement && tags.includes(node.tagName)) {
-      const caret = document.createRange();
-      caret.setStartAfter(node);
-      caret.collapse(true);
-      current.selection.removeAllRanges();
-      current.selection.addRange(caret);
-      editorSelection = caret.cloneRange();
-      return;
-    }
-    node = node.parentNode;
-  }
-}
-function formattedHtml(value: string) {
-  let html = escapeHtml(value);
-  if (italicActive.value) html = `<i>${html}</i>`;
-  if (boldActive.value) html = `<b>${html}</b>`;
-  return html;
-}
-function enforceContentLimit(event: InputEvent) {
-  if (!event.inputType.startsWith("insert")) return;
-  const addition =
-    event.data?.length ??
-    (["insertParagraph", "insertLineBreak"].includes(event.inputType) ? 1 : 0);
-  if (contentLength.value - selectedTextLength() + addition > MAX_CONTENT_LENGTH) {
-    event.preventDefault();
-    limitAttempted.value = true;
-    return;
-  }
-  if (event.inputType !== "insertText" || !event.data) return;
-  event.preventDefault();
-  if (!boldActive.value) leaveInactiveFormat("bold");
-  if (!italicActive.value) leaveInactiveFormat("italic");
-  document.execCommand("insertHTML", false, formattedHtml(event.data));
-  serializeEditor();
-  rememberSelection(false);
-}
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll("\n", "<br>");
-}
-function pasteContent(event: ClipboardEvent) {
-  event.preventDefault();
-  const pasted = event.clipboardData?.getData("text/plain") ?? "";
-  const available = Math.max(0, MAX_CONTENT_LENGTH - contentLength.value + selectedTextLength());
-  const accepted = pasted.slice(0, available);
-  if (!boldActive.value) leaveInactiveFormat("bold");
-  if (!italicActive.value) leaveInactiveFormat("italic");
-  const html = formattedHtml(accepted);
-  if (html) document.execCommand("insertHTML", false, html);
-  if (accepted.length < pasted.length) limitAttempted.value = true;
-  serializeEditor();
-  rememberSelection(false);
 }
 async function upload(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0];
@@ -316,65 +132,11 @@ useHead({ title: "Administrar noticias · Matchday" });
               </option></AppSelect
             ></label
           >
-          <div class="editor-field">
-            <span id="news-content-label">Contenido</span>
-            <div class="format-toolbar" aria-label="Formato del contenido">
-              <button
-                type="button"
-                title="Negrita"
-                aria-label="Aplicar negrita"
-                :class="{ active: boldActive }"
-                :aria-pressed="boldActive"
-                @mousedown.prevent
-                @click="applyFormat('bold')"
-              >
-                <strong>N</strong>
-              </button>
-              <button
-                type="button"
-                title="Cursiva"
-                aria-label="Aplicar cursiva"
-                :class="{ active: italicActive }"
-                :aria-pressed="italicActive"
-                @mousedown.prevent
-                @click="applyFormat('italic')"
-              >
-                <em>C</em>
-              </button>
-              <span>Selecciona texto o activa el formato antes de escribir</span>
-            </div>
-            <div
-              ref="contentEditor"
-              class="content-editor"
-              :class="{ invalid: limitAttempted }"
-              contenteditable="true"
-              role="textbox"
-              aria-labelledby="news-content-label"
-              aria-describedby="news-content-limit"
-              aria-multiline="true"
-              spellcheck="true"
-              data-placeholder="Escribe la noticia. Separa los párrafos con una línea en blanco."
-              @beforeinput="enforceContentLimit"
-              @paste="pasteContent"
-              @input="handleEditorInput"
-              @mouseup="rememberSelection()"
-              @keyup="rememberKeyboardSelection"
-              @focus="rememberSelection()"
-            />
-            <div
-              id="news-content-limit"
-              class="content-limit"
-              :class="{ warning: contentAtLimit || limitAttempted }"
-              :role="limitAttempted ? 'alert' : undefined"
-            >
-              <span>{{
-                limitAttempted
-                  ? "Alcanzaste el máximo permitido."
-                  : "Las etiquetas de formato no cuentan en el límite."
-              }}</span
-              ><strong>{{ contentLength }} / {{ MAX_CONTENT_LENGTH }}</strong>
-            </div>
-          </div>
+          <NewsContentEditor
+            v-model="content"
+            :limit="MAX_CONTENT_LENGTH"
+            @count="contentLength = $event"
+          />
           <label
             >Portada<input type="file" accept="image/png,image/jpeg,image/webp" @change="upload"
           /></label>
@@ -468,104 +230,12 @@ useHead({ title: "Administrar noticias · Matchday" });
 }
 .columns > *,
 form,
-form > *,
-.editor-field,
-.format-toolbar {
+form > * {
   min-width: 0;
 }
 form {
   display: grid;
   gap: 16px;
-}
-.editor-field {
-  display: grid;
-  color: var(--muted);
-  font-size: 14px;
-}
-.editor-field > span {
-  margin-bottom: 8px;
-}
-.format-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px;
-  border: 1px solid var(--border);
-  border-bottom: 0;
-  border-radius: 8px 8px 0 0;
-  background: var(--surface);
-}
-.format-toolbar button {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  min-height: 34px;
-  padding: 0;
-}
-.format-toolbar button.active {
-  border-color: var(--accent);
-  background: var(--ui-success-soft);
-  color: var(--accent);
-  box-shadow: inset 0 -2px var(--accent);
-}
-.format-toolbar span {
-  margin-left: 5px;
-  color: var(--muted);
-  font-size: 12px;
-  overflow-wrap: anywhere;
-}
-.content-editor {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: 100%;
-  min-height: 170px;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 0 0 8px 8px;
-  background: var(--panel-bg);
-  color: var(--text-color);
-  font: inherit;
-  font-size: 16px;
-  line-height: 1.7;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  outline: none;
-  cursor: text;
-}
-.content-editor :deep(i),
-.content-editor :deep(em) {
-  font-style: italic !important;
-}
-.content-editor:empty:before {
-  content: attr(data-placeholder);
-  color: var(--muted);
-  pointer-events: none;
-}
-.content-editor:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--ui-success-soft, rgba(189, 237, 117, 0.12));
-}
-.content-editor.invalid {
-  border-color: var(--ui-danger, #e46f68);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ui-danger, #e46f68) 16%, transparent);
-}
-.content-limit {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  padding-top: 8px;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.4;
-}
-.content-limit strong {
-  flex-shrink: 0;
-  color: var(--text-color);
-}
-.content-limit.warning,
-.content-limit.warning strong {
-  color: var(--ui-danger, #e46f68);
 }
 .formatted-preview {
   display: flex;
@@ -607,8 +277,5 @@ form {
   }
 }
 @media (max-width: 700px) {
-  .format-toolbar span {
-    display: none;
-  }
 }
 </style>

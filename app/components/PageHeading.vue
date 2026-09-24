@@ -78,6 +78,13 @@ h1 > span {
   border: 1px solid var(--ui-border, rgba(255, 255, 255, 0.06));
   background: var(--ui-surface, rgba(15, 18, 22, 0.96));
 }
+.entity-heading > div:first-of-type {
+  min-width: 0;
+  flex: 1;
+}
+.entity-heading > :not(div:first-of-type) {
+  flex-shrink: 0;
+}
 .entity-heading h1 {
   font-size: clamp(28px, 4vw, 44px);
   margin: 8px 0;

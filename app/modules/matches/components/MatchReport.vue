@@ -2,6 +2,7 @@
 import PlayerEvents from "~/modules/matches/components/PlayerEvents.vue";
 import ShootoutSummary from "~/modules/matches/components/ShootoutSummary.vue";
 import AnimatedHeroIcon from "~/components/AnimatedHeroIcon.vue";
+import TeamBadge from "~/modules/teams/components/TeamBadge.vue";
 
 import type { Shootout } from "~/modules/matches/utils/shootout";
 import {
@@ -21,6 +22,7 @@ import {
 import type { ReportEvent } from "~/modules/matches/types/report";
 type Team = {
   name: string;
+  crest?: string | null;
   goals: { goal_type: string; minute: number; added_minute?: number }[];
   penalty_score?: number;
 };
@@ -185,9 +187,9 @@ function eventIcon(kind: string, outcome?: string) {
     aria-label="Estadísticas del partido"
   >
     <div class="statistics-heading">
-      <span class="team-token home">{{ initials(match.home_team.name) }}</span>
+      <TeamBadge :name="match.home_team.name" :src="match.home_team.crest" />
       <h3>Estadísticas del equipo</h3>
-      <span class="team-token away">{{ initials(match.away_team.name) }}</span>
+      <TeamBadge :name="match.away_team.name" :src="match.away_team.crest" />
     </div>
     <div class="statistics-teams">
       <span>{{ match.home_team.name }}</span

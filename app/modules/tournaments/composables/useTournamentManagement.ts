@@ -33,6 +33,7 @@ export function useTournamentManagement() {
     phaseQuery.data.value.map((phase) => ({
       id: phase.id,
       season: phase.season,
+      order: phase.order,
       name: phase.name,
       kind: phase.kind,
       status: phase.status,

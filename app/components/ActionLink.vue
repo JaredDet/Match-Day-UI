@@ -18,7 +18,7 @@ defineProps<{ to: string; label?: string }>();
   justify-content: space-between;
   gap: 18px;
   width: fit-content;
-  min-height: 42px;
+  min-height: 44px;
   padding: 10px 14px;
   border: 1px solid var(--border);
   border-radius: 10px;

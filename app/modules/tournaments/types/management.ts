@@ -7,6 +7,7 @@ export interface DemoGroup {
 export interface DemoPhase {
   id: string;
   season: string;
+  order: number;
   name: string;
   kind: "groups" | "knockout" | "third_place";
   status: "scheduled" | "active" | "finished";

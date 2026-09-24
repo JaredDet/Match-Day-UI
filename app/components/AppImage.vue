@@ -1,10 +1,46 @@
 <script setup lang="ts">
 defineOptions({ inheritAttrs: false });
-const props = withDefaults(defineProps<{ src?: string | null; alt: string; eager?: boolean }>(), {
-  src: null,
-  eager: false,
-});
+const props = withDefaults(
+  defineProps<{
+    src?: string | null;
+    alt: string;
+    eager?: boolean;
+    width?: number;
+    height?: number;
+    fit?: "cover" | "contain";
+    fill?: boolean;
+  }>(),
+  {
+    src: null,
+    eager: false,
+    width: undefined,
+    height: undefined,
+    fit: "cover",
+    fill: false,
+  },
+);
 const failed = ref(false);
+const dimensions = computed(() =>
+  props.fill
+    ? {
+        position: "absolute" as const,
+        inset: "0",
+        width: "100%",
+        minWidth: "100%",
+        maxWidth: "100%",
+        height: "100%",
+        minHeight: "100%",
+        maxHeight: "100%",
+      }
+    : {
+        width: props.width ? `${props.width}px` : undefined,
+        minWidth: props.width ? `${props.width}px` : undefined,
+        maxWidth: props.width ? `${props.width}px` : undefined,
+        height: props.height ? `${props.height}px` : undefined,
+        minHeight: props.height ? `${props.height}px` : undefined,
+        maxHeight: props.height ? `${props.height}px` : undefined,
+      },
+);
 watch(
   () => props.src,
   () => {
@@ -14,14 +50,14 @@ watch(
 </script>
 
 <template>
-  <span class="app-image" :class="{ fallback: !src || failed }">
+  <span v-bind="$attrs" class="app-image" :class="{ fallback: !src || failed }" :style="dimensions">
     <img
       v-if="src && !failed"
-      v-bind="$attrs"
       :src="src"
       :alt="alt"
       :loading="eager ? 'eager' : 'lazy'"
       decoding="async"
+      :style="{ objectFit: fit }"
       @error="failed = true"
     />
     <span v-else class="image-fallback" role="img" :aria-label="alt || 'Imagen no disponible'">

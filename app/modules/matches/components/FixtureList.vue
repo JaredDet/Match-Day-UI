@@ -20,7 +20,9 @@ defineProps<{ matches: Match[] }>();
           })
         }}</small></span
       ><span class="fixture-side"
-        ><TeamBadge :name="match.home_team.name" />{{ match.home_team.name }}</span
+        ><TeamBadge :name="match.home_team.name" :src="match.home_team.crest" />{{
+          match.home_team.name
+        }}</span
       ><strong class="fixture-result"
         >{{
           match.status === "scheduled"
@@ -30,7 +32,8 @@ defineProps<{ matches: Match[] }>();
           >Pen. {{ match.home_team.penalty_score }}–{{ match.away_team.penalty_score }}</small
         ></strong
       ><span class="fixture-side away"
-        >{{ match.away_team.name }}<TeamBadge :name="match.away_team.name" /></span
+        >{{ match.away_team.name
+        }}<TeamBadge :name="match.away_team.name" :src="match.away_team.crest" /></span
       ><span aria-hidden="true">↗</span></NuxtLink
     >
     <p v-if="!matches.length" class="section-empty">

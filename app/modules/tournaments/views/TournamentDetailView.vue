@@ -9,20 +9,26 @@ import TournamentBracket from "~/modules/tournaments/components/TournamentBracke
 import { useTournamentManagement } from "~/modules/tournaments/composables/useTournamentManagement";
 import { useTeams } from "~/modules/teams/composables/useTeams";
 import SeasonBoard from "~/modules/tournaments/components/SeasonBoard.vue";
-import { groups } from "~/modules/tournaments/data/competition";
 const route = useRoute(),
   manager = useTournamentManagement(),
   { teamById } = useTeams();
 const tournament = computed(() =>
   manager.tournaments.value.find((t) => t.slug === route.params.id),
 );
-if (!tournament.value)
-  throw createError({ statusCode: 404, statusMessage: "Torneo no encontrado" });
 const seasons = computed(() =>
   manager.seasons.value.filter((s) => s.tournament === tournament.value!.id),
 );
 const season = ref(
   seasons.value.find((s) => s.id === route.query.season)?.id ?? seasons.value[0]?.id ?? "",
+);
+watch(
+  seasons,
+  (editions) => {
+    if (!editions.length || editions.some((edition) => edition.id === season.value)) return;
+    season.value =
+      editions.find((edition) => edition.id === route.query.season)?.id ?? editions[0]!.id;
+  },
+  { immediate: true },
 );
 const tab = ref("groups");
 const registrations = manager.registrations;
@@ -59,12 +65,26 @@ const tabs = [
   { id: "groups", label: "Grupos" },
   { id: "bracket", label: "Eliminatorias" },
 ];
-const currentPhaseId = computed(
-  () =>
-    [...manager.phases.value]
-      .filter((phase) => phase.status !== "finished")
-      .sort((left, right) => left.order - right.order)[0]?.id,
+const seasonPhases = computed(() =>
+  manager.phases.value
+    .filter((phase) => phase.season === season.value)
+    .sort((left, right) => left.order - right.order),
 );
+const currentPhaseIds = computed(() => {
+  const pending = seasonPhases.value.filter((phase) => phase.status !== "finished");
+  const primary = pending.find((phase) => phase.kind !== "third_place");
+  if (!primary) return new Set(pending.slice(0, 1).map((phase) => phase.id));
+
+  const laterMainPhase = seasonPhases.value.some(
+    (phase) => phase.kind !== "third_place" && phase.order > primary.order,
+  );
+  const ids = new Set([primary.id]);
+  if (!laterMainPhase) {
+    const thirdPlace = pending.find((phase) => phase.kind === "third_place");
+    if (thirdPlace) ids.add(thirdPlace.id);
+  }
+  return ids;
+});
 useSeoMeta(() => ({
   title: `${tournament.value?.name ?? "Torneo"} · Matchday`,
   description: `Equipos, fases, grupos y eliminatorias de ${tournament.value?.name ?? "este torneo"}.`,
@@ -82,12 +102,16 @@ useSeoMeta(() => ({
         { label: tournament.name },
       ]"
     />
-    <AppImage
-      v-if="tournament.logo"
-      class="tournament-detail-logo"
-      :src="tournament.logo"
-      :alt="`Emblema de ${tournament.name}`"
-    />
+    <div class="tournament-detail-media">
+      <AppImage
+        class="tournament-detail-logo"
+        src="/images/tournaments/national-cup-hero.png"
+        :alt="`Estadio preparado para ${tournament.name}`"
+        fit="cover"
+        fill
+        eager
+      />
+    </div>
     <PageHeading
       :title="tournament.name"
       :kicker="`${tournament.country} · ${tournament.category}`"
@@ -95,24 +119,26 @@ useSeoMeta(() => ({
       back-to="/tournaments"
       back-label="Todos los torneos"
     >
-      <label class="season-picker"
-        >Temporada<AppSelect v-model="season"
-          ><option v-for="edition in seasons" :key="edition.id" :value="edition.id">
-            {{ edition.name }}
-          </option></AppSelect
-        ></label
-      >
-      <NuxtLink
-        :to="`/tournaments/manage?tournament=${tournament.id}&season=${season}`"
-        class="primary-action"
-        >Gestionar torneo</NuxtLink
-      ><NuxtLink :to="`/tournaments/register?season=${season}`" class="primary-action"
-        >Inscribir equipos</NuxtLink
-      >
-      <ShareButton
-        :title="tournament.name"
-        :text="`Equipos, fases y eliminatorias de ${tournament.name}.`"
-      />
+      <div class="tournament-actions">
+        <label class="season-picker"
+          >Temporada<AppSelect v-model="season"
+            ><option v-for="edition in seasons" :key="edition.id" :value="edition.id">
+              {{ edition.name }}
+            </option></AppSelect
+          ></label
+        >
+        <NuxtLink
+          :to="`/tournaments/manage?tournament=${tournament.id}&season=${season}`"
+          class="primary-action"
+          >Gestionar torneo</NuxtLink
+        ><NuxtLink :to="`/tournaments/register?season=${season}`" class="primary-action"
+          >Inscribir equipos</NuxtLink
+        >
+        <ShareButton
+          :title="tournament.name"
+          :text="`Equipos, fases y eliminatorias de ${tournament.name}.`"
+        />
+      </div>
     </PageHeading>
     <nav class="entity-tabs" aria-label="Secciones del torneo">
       <button
@@ -127,8 +153,7 @@ useSeoMeta(() => ({
     </nav>
     <Transition name="section-swap" mode="out-in"
       ><section :key="`${tab}-${season}`" class="entity-content">
-        <SeasonBoard v-if="tab !== 'teams'" :season-id="season" :tab="tab" />
-        <template v-else-if="tab === 'teams'">
+        <template v-if="tab === 'teams'">
           <div class="content-heading">
             <h2>Equipos inscritos</h2>
             <span>{{ registeredTeams.length }} participantes en esta temporada</span>
@@ -161,7 +186,7 @@ useSeoMeta(() => ({
                   :to="`/teams/${team.id}`"
                   class="registered-team"
                 >
-                  <TeamBadge :name="team.name" />
+                  <TeamBadge :name="team.name" :src="team.crest" />
                   <strong>{{ team.name }}</strong>
                   <span>Ver equipo</span>
                 </NuxtLink>
@@ -176,17 +201,17 @@ useSeoMeta(() => ({
           </div>
           <div class="phase-list">
             <article
-              v-for="phase in manager.phases.value.filter((item) => item.season === season)"
+              v-for="(phase, phaseIndex) in seasonPhases"
               :key="phase.id"
               class="info-panel"
-              :class="{ current: phase.id === currentPhaseId }"
+              :class="{ current: currentPhaseIds.has(phase.id) }"
             >
               <div>
-                <span>FASE {{ phase.order + 1 }}</span>
+                <span>FASE {{ phaseIndex + 1 }}</span>
                 <h3>{{ phase.name }}</h3>
               </div>
               <span class="phase-status"
-                ><strong v-if="phase.id === currentPhaseId">Actual</strong
+                ><strong v-if="currentPhaseIds.has(phase.id)">Actual</strong
                 >{{ phase.status === "finished" ? "Finalizada" : "Programada" }}</span
               >
               <span>{{
@@ -194,83 +219,22 @@ useSeoMeta(() => ({
                   ? "Clasifican los dos primeros por grupo"
                   : phase.kind === "third_place"
                     ? "Perdedores de semifinales"
-                    : "Avanzan los ganadores"
+                    : !seasonPhases.some(
+                          (item) => item.kind !== "third_place" && item.order > phase.order,
+                        )
+                      ? "Define al campeón"
+                      : "Avanzan los ganadores"
               }}</span>
             </article>
           </div>
         </template>
-        <template v-else-if="tab === 'groups'"
-          ><div class="content-heading">
+        <template v-else-if="tab === 'groups'">
+          <div class="content-heading">
             <h2>Fase de grupos</h2>
             <span>Clasifican los dos primeros de cada grupo</span>
           </div>
-          <div class="groups-layout">
-            <div v-for="group in groups" :key="group.name" class="group-panel">
-              <h3>Grupo {{ group.name }}<span>6 jornadas · Finalizado</span></h3>
-              <div class="table-scroll">
-                <table>
-                  <caption class="sr-only">
-                    Clasificación del grupo
-                    {{
-                      group.name
-                    }}
-                  </caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">Equipo</th>
-                      <th scope="col">
-                        <abbr title="Partidos jugados">PJ</abbr>
-                      </th>
-                      <th scope="col"><abbr title="Ganados">G</abbr></th>
-                      <th scope="col"><abbr title="Empatados">E</abbr></th>
-                      <th scope="col"><abbr title="Perdidos">P</abbr></th>
-                      <th scope="col"><abbr title="Goles a favor">GF</abbr></th>
-                      <th scope="col">
-                        <abbr title="Goles en contra">GC</abbr>
-                      </th>
-                      <th scope="col">
-                        <abbr title="Diferencia de goles">DG</abbr>
-                      </th>
-                      <th scope="col"><abbr title="Puntos">PTS</abbr></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      v-for="(row, index) in group.rows"
-                      :key="row.id"
-                      :class="{ qualified: index < 2 }"
-                    >
-                      <th scope="row">
-                        <NuxtLink :to="`/teams/${row.id}`"
-                          ><span class="rank">{{ index + 1 }}</span
-                          ><TeamBadge :name="teamById(row.id)?.name" />{{ teamById(row.id)?.name
-                          }}<span v-if="index < 2" class="sr-only">Clasificado</span></NuxtLink
-                        >
-                      </th>
-                      <td>{{ row.w + row.d + row.l }}</td>
-                      <td>{{ row.w }}</td>
-                      <td>{{ row.d }}</td>
-                      <td>{{ row.l }}</td>
-                      <td>{{ row.gf }}</td>
-                      <td>{{ row.ga }}</td>
-                      <td :class="{ positive: row.gf > row.ga }">
-                        {{ row.gf > row.ga ? "+" : "" }}{{ row.gf - row.ga }}
-                      </td>
-                      <td class="points">{{ row.w * 3 + row.d }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-          <p class="standings-legend">
-            <i /> Clasificado a octavos
-            <span
-              >PJ: jugados · G: ganados · E: empatados · P: perdidos · GF/GC: goles · DG: diferencia
-              · PTS: puntos</span
-            >
-          </p></template
-        >
+          <SeasonBoard :season-id="season" tab="groups" />
+        </template>
         <template v-else
           ><div class="content-heading">
             <h2>Camino al título</h2>
@@ -283,13 +247,27 @@ useSeoMeta(() => ({
 </template>
 
 <style scoped>
-.tournament-detail-logo {
-  width: 96px;
-  height: 96px;
-  margin: 18px 0;
+.tournament-detail-media {
+  position: relative;
+  height: clamp(220px, 32vw, 420px);
+  margin: 18px 0 26px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--panel-bg), var(--surface));
 }
 .tournament-detail-logo :deep(img) {
-  object-fit: contain;
+  width: 100% !important;
+  max-width: none;
+  height: 100% !important;
+  object-fit: cover;
+  object-position: center;
+}
+@media (max-width: 700px) {
+  .tournament-detail-media {
+    height: min(78vw, 340px);
+    border-radius: 12px;
+  }
 }
 html[data-theme="light"] main,
 html[data-theme="light"] .competition-page,
@@ -381,16 +359,21 @@ h2 {
   text-transform: uppercase;
 }
 .season-picker {
-  margin-left: auto;
   display: flex;
   flex-direction: column;
   gap: 12px;
   font-size: 10px;
   color: var(--ui-muted, #939b93);
 }
+.tournament-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 22px;
+  margin-left: auto;
+}
 .season-picker select {
   min-width: 132px;
-  min-height: 46px;
+  min-height: 44px;
   padding: 12px 44px 12px 16px;
   border: 1px solid var(--ui-border, #42483e);
   border-radius: 6px;
@@ -568,6 +551,13 @@ h2 {
   opacity: 0;
 }
 @media (max-width: 700px) {
+  .tournament-actions {
+    width: 100%;
+    align-items: stretch;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-left: 0;
+  }
   .season-picker {
     margin-left: 0;
     flex-direction: row;
@@ -763,7 +753,7 @@ h2 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 42px;
+  min-height: 44px;
   padding: 0 16px;
   border-radius: 12px;
   background: var(--ui-success-soft, rgba(189, 237, 117, 0.12));

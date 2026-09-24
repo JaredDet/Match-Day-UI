@@ -19,15 +19,9 @@ useHead({ title: "Torneos · Matchday" });
         :key="tournament.id"
         class="info-panel editorial-card"
       >
-        <AppImage
-          v-if="tournament.logo"
-          class="tournament-logo"
-          :src="tournament.logo"
-          :alt="`Emblema de ${tournament.name}`"
-        />
-        <div class="tournament-mark">
-          <span>0{{ index + 1 }}</span
-          ><strong>{{ tournament.category }}</strong>
+        <div class="tournament-meta">
+          <span>0{{ index + 1 }}</span>
+          <strong>{{ tournament.category }}</strong>
         </div>
         <span class="section-kicker">{{ tournament.country }} · {{ tournament.category }}</span>
         <h2>
@@ -68,14 +62,6 @@ h2 {
   display: flex;
   align-items: center;
   gap: 10px;
-}
-.tournament-logo {
-  width: 76px;
-  height: 76px;
-  margin-bottom: 18px;
-}
-.tournament-logo :deep(img) {
-  object-fit: contain;
 }
 @media (min-width: 1450px) {
   main {
@@ -190,23 +176,18 @@ h2 {
     box-shadow: 0 6px 18px var(--shadow);
   }
 }
-.tournament-mark {
+.tournament-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: -24px -24px 2px;
-  padding: 19px 24px;
-  background: linear-gradient(
-    125deg,
-    var(--panel-strong),
-    color-mix(in srgb, var(--accent-fill) 30%, var(--panel-strong))
-  );
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
 }
-.tournament-mark span {
-  font: 700 40px "Barlow Condensed";
+.tournament-meta > span {
+  font: 700 28px "Barlow Condensed";
   color: var(--accent);
 }
-.tournament-mark strong {
+.tournament-meta strong {
   font-size: 10px;
   letter-spacing: 1.4px;
   text-transform: uppercase;
