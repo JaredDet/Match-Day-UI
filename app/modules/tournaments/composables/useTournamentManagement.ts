@@ -59,6 +59,7 @@ export function useTournamentManagement() {
           match: fixture.match,
           group: fixture.group ?? undefined,
           matchday: fixture.matchday,
+          position: fixture.position,
         })),
     })),
   );
@@ -112,8 +113,25 @@ export function useTournamentManagement() {
     await phaseQuery.refresh();
     return id;
   }
+  async function updatePhase(
+    id: string,
+    input: {
+      name: string;
+      kind: "groups" | "knockout" | "third_place";
+      order: number;
+      qualifying_teams: number;
+      matchdays: number;
+    },
+  ) {
+    await repository.updatePhase(id, input);
+    await phaseQuery.refresh();
+  }
   async function addGroup(phase: string, name: string) {
     await repository.createGroup(phase, name);
+    await groupQuery.refresh();
+  }
+  async function updateGroup(id: string, name: string) {
+    await repository.updateGroup(id, name);
     await groupQuery.refresh();
   }
   async function assign(_phase: string, group: string, team: string) {
@@ -148,6 +166,10 @@ export function useTournamentManagement() {
     const fixture = fixtureQuery.data.value.find((item) => item.match === match);
     if (!fixture) throw new Error("Fixture no encontrado.");
     await repository.deleteFixture(fixture.id);
+    await fixtureQuery.refresh();
+  }
+  async function updateFixture(id: string, matchday: number, position: number) {
+    await repository.updateFixture(id, { matchday, position });
     await fixtureQuery.refresh();
   }
   function standings(phase: string, group: string) {
@@ -222,13 +244,16 @@ export function useTournamentManagement() {
     enroll,
     withdraw,
     createPhase,
+    updatePhase,
     addGroup,
+    updateGroup,
     assign,
     removeTeam,
     removeGroup,
     removePhase,
     fixture,
     unfixture,
+    updateFixture,
     standings,
     finishGroups,
     manualOrder,

@@ -72,6 +72,12 @@ export class ApiMatchRepository implements MatchRepository {
                 outcome: event.outcome,
                 sequence: event.sequence_number ?? 0,
               })),
+            participants: (detail.penalty_shootout.participants ?? []).map((participant: any) => ({
+              playerId: participant.player_id,
+              name: participant.player_name,
+              side: participant.team_side === "home" ? 0 : 1,
+              eligible: participant.is_eligible,
+            })),
           }
         : undefined,
     } as Match;

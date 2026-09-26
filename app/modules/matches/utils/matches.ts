@@ -30,6 +30,8 @@ export type Match = {
   id: string;
   status: "scheduled" | "live" | "finished";
   scheduled_at: string;
+  stadium_name?: string | null;
+  referee_name?: string | null;
   current_period: Period | null;
   current_minute: number | null;
   current_added_minute: number;

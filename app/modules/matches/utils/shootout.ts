@@ -5,9 +5,15 @@
   sequence: number;
 };
 export type Shootout = {
-  status: "in_progress" | "finished";
+  status: "in_progress" | "decided" | "finished";
   nextSide: 0 | 1 | null;
   kicks: ShootoutKick[];
+  participants: {
+    playerId: string;
+    name: string;
+    side: 0 | 1;
+    eligible: boolean;
+  }[];
 };
 export function shootoutRows(shootout: Shootout) {
   const sides = [0, 1].map((side) =>
@@ -54,5 +60,6 @@ export function demoShootout(finished: boolean): Shootout {
       outcome,
       sequence: index + 1,
     })),
+    participants: [],
   };
 }

@@ -1,5 +1,10 @@
 import { news, type DemoNews } from "~/modules/news/data/news";
-import { newsPreview, plainNewsText } from "~/modules/news/utils/preview";
+import {
+  NEWS_CONTENT_MAX_LENGTH,
+  NEWS_PREVIEW_MAX_LENGTH,
+  newsPreview,
+  plainNewsText,
+} from "~/modules/news/utils/preview";
 export type NewsPreview = Omit<DemoNews, "content"> & { preview: string };
 export function useDemoNews() {
   const items = useState<DemoNews[]>("demo-news", () =>
@@ -18,7 +23,7 @@ export function useDemoNews() {
       })),
   );
   function save(
-    input: Pick<DemoNews, "title" | "team_id" | "cover_image" | "content">,
+    input: Pick<DemoNews, "title" | "preview" | "team_id" | "cover_image" | "content">,
     id?: string,
   ) {
     const current = id ? items.value.find((item) => item.id === id) : undefined;
@@ -26,11 +31,15 @@ export function useDemoNews() {
       throw new Error("Solo se pueden editar borradores.");
     if (!input.title.trim() || Array.from(input.title.trim()).length > 200)
       throw new Error("El título debe tener entre 1 y 200 caracteres.");
+    if (Array.from(input.preview ?? "").length > NEWS_PREVIEW_MAX_LENGTH)
+      throw new Error(`La preview admite un máximo de ${NEWS_PREVIEW_MAX_LENGTH} caracteres.`);
     if (
       input.content.children.reduce((total, p) => total + Array.from(plainNewsText(p)).length, 0) >
-      500
+      NEWS_CONTENT_MAX_LENGTH
     )
-      throw new Error("El contenido admite un máximo de 500 caracteres de texto.");
+      throw new Error(
+        `El contenido admite un máximo de ${NEWS_CONTENT_MAX_LENGTH} caracteres de texto.`,
+      );
     for (const paragraph of input.content.children) {
       const heading = paragraph.match(/^<(h[1-4])>([\s\S]*)<\/\1>$/);
       if (/^<h[1-4]>/.test(paragraph) && !heading)

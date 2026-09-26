@@ -15,7 +15,7 @@ export interface DemoPhase {
   qualifying: number;
   matchdays: number;
   groups: DemoGroup[];
-  fixtures: { id?: string; match: string; group?: string; matchday: number }[];
+  fixtures: { id: string; match: string; group?: string; matchday: number; position: number }[];
   source?: string;
   scheduled_at?: string;
   interval?: number;

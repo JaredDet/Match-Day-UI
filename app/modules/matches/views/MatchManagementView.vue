@@ -35,6 +35,12 @@ const home = ref(""),
   varReason = ref("goal"),
   varDecision = ref("confirmed"),
   homePossession = ref(50),
+  stadiumName = ref(""),
+  refereeName = ref(""),
+  shootoutSide = ref<Side>("home"),
+  unavailablePlayer = ref(""),
+  opponentExcludedPlayer = ref(""),
+  departureReason = ref<"injury" | "sent_off">("injury"),
   error = ref(""),
   message = ref(""),
   kicker = ref("");
@@ -95,6 +101,20 @@ const kickers = computed(() =>
       )
     : [],
 );
+const unavailableParticipants = computed(
+  () =>
+    match.value?.shootout?.participants.filter(
+      (participant) =>
+        participant.eligible && participant.side === (shootoutSide.value === "home" ? 0 : 1),
+    ) ?? [],
+);
+const opponentParticipants = computed(
+  () =>
+    match.value?.shootout?.participants.filter(
+      (participant) =>
+        participant.eligible && participant.side !== (shootoutSide.value === "home" ? 0 : 1),
+    ) ?? [],
+);
 const opponentPlayers = computed(() => {
   if (!match.value) return [];
   const opponent = side.value === "home" ? "away" : "home";
@@ -138,11 +158,15 @@ watch(
     message.value = "";
     player.value = "";
     kicker.value = "";
+    unavailablePlayer.value = "";
+    opponentExcludedPlayer.value = "";
     if (selected.value) await ops.prepare(selected.value);
     homeLineup.value = [...(state.value?.lineups.home ?? [])];
     awayLineup.value = [...(state.value?.lineups.away ?? [])];
     minute.value = match.value?.current_minute ?? 0;
     addedMinutes.value = match.value?.clock.announced_added_minutes ?? 0;
+    stadiumName.value = match.value?.stadium_name ?? "";
+    refereeName.value = match.value?.referee_name ?? "";
     for (const which of ["home", "away"] as Side[]) {
       const shape = match.value?.[`${which}_team`].formation || "4-3-3";
       formationShape[which] = shape;
@@ -228,6 +252,10 @@ watch(side, () => {
   statisticPlayer.value = "";
   goalkeeper.value = "";
 });
+watch(shootoutSide, () => {
+  unavailablePlayer.value = "";
+  opponentExcludedPlayer.value = "";
+});
 watch(statisticKind, (value) => {
   statisticPlayer.value = "";
   goalkeeper.value = "";
@@ -252,7 +280,13 @@ useHead({
     />
     <p v-if="error" class="feedback error" role="alert">{{ error }}</p>
     <p v-if="message" class="feedback" role="status">{{ message }}</p>
-    <div class="columns" :class="{ 'creation-layout': props.mode === 'create' }">
+    <div
+      class="columns"
+      :class="{
+        'creation-layout': props.mode === 'create',
+        'manage-layout': props.mode === 'manage',
+      }"
+    >
       <ManagementPanel v-if="props.mode === 'create'" title="Crear partido">
         <ol class="creation-steps" aria-label="Progreso de creación del partido">
           <li v-for="(label, index) in ['Partido', 'Formaciones', 'Revisión']" :key="label">
@@ -375,7 +409,10 @@ useHead({
           </template>
         </form>
       </ManagementPanel>
-      <ManagementPanel v-if="props.mode === 'manage'" title="Seleccionar partido"
+      <ManagementPanel
+        v-if="props.mode === 'manage'"
+        class="match-selector"
+        title="Seleccionar partido"
         ><div class="management-panel-heading">
           <p>Elige un encuentro existente para abrir su consola.</p>
           <NuxtLink to="/matches/create">Crear partido nuevo</NuxtLink>
@@ -477,51 +514,72 @@ useHead({
             </button>
           </div></ManagementPanel
         >
-        <ManagementPanel v-if="match.status === 'live'" title="Ajuste táctico en vivo">
-          <p>Cambia la disposición de quienes siguen en cancha. Esto no reemplaza jugadores.</p>
-          <div
-            v-for="which in ['home', 'away'] as const"
-            :key="`tactical-${which}`"
-            class="tactical-team"
+        <ManagementPanel v-if="match.status === 'scheduled'" title="Datos del encuentro">
+          <p>Completa los datos del partido antes de iniciar el juego.</p>
+          <form
+            @submit.prevent="
+              run(
+                () => ops.updateDetails(selected, stadiumName, refereeName),
+                'Datos del encuentro actualizados.',
+              )
+            "
           >
-            <h3>{{ match[`${which}_team`].name }}</h3>
-            <AppSelect
-              :model-value="formationChoice[which]"
-              @update:model-value="selectFormation(which, String($event))"
+            <label>Estadio<input v-model="stadiumName" maxlength="200" /></label>
+            <label>Árbitro<input v-model="refereeName" maxlength="200" /></label>
+            <button>Guardar datos</button>
+          </form>
+        </ManagementPanel>
+        <ManagementPanel
+          v-if="match.status === 'live'"
+          class="tactical-panel"
+          title="Ajuste táctico en vivo"
+        >
+          <p>Cambia la disposición de quienes siguen en cancha. Esto no reemplaza jugadores.</p>
+          <div class="tactical-teams">
+            <div
+              v-for="which in ['home', 'away'] as const"
+              :key="`tactical-${which}`"
+              class="tactical-team"
             >
-              <option v-for="shape in formationShapes" :key="shape" :value="`builtin:${shape}`">
-                {{ shape }}
-              </option>
-              <option
-                v-for="item in formations[match[`${which}_team`].id] ?? []"
-                :key="item.id"
-                :value="item.id"
+              <h3>{{ match[`${which}_team`].name }}</h3>
+              <AppSelect
+                :model-value="formationChoice[which]"
+                @update:model-value="selectFormation(which, String($event))"
               >
-                {{ item.name }} · {{ item.shape }}
-              </option>
-            </AppSelect>
-            <FormationEditor
-              v-model="formationLayout[which]"
-              :players="formationPlayers(which)"
-              :formation="formationShape[which]"
-              compact
-            />
-            <button
-              @click="
-                run(
-                  () =>
-                    ops.changeFormation(
-                      selected,
-                      which,
-                      formationShape[which],
-                      formationLayout[which],
-                    ),
-                  'Formación táctica actualizada.',
-                )
-              "
-            >
-              Aplicar cambio táctico
-            </button>
+                <option v-for="shape in formationShapes" :key="shape" :value="`builtin:${shape}`">
+                  {{ shape }}
+                </option>
+                <option
+                  v-for="item in formations[match[`${which}_team`].id] ?? []"
+                  :key="item.id"
+                  :value="item.id"
+                >
+                  {{ item.name }} · {{ item.shape }}
+                </option>
+              </AppSelect>
+              <FormationEditor
+                v-model="formationLayout[which]"
+                :players="formationPlayers(which)"
+                :formation="formationShape[which]"
+                compact
+              />
+              <button
+                @click="
+                  run(
+                    () =>
+                      ops.changeFormation(
+                        selected,
+                        which,
+                        formationShape[which],
+                        formationLayout[which],
+                      ),
+                    'Formación táctica actualizada.',
+                  )
+                "
+              >
+                Aplicar cambio táctico
+              </button>
+            </div>
           </div>
         </ManagementPanel>
         <ManagementPanel
@@ -799,6 +857,7 @@ useHead({
             >
             <div class="actions">
               <button
+                :disabled="!kicker"
                 @click="
                   run(async () => {
                     await ops.kick(selected, kicker, true);
@@ -808,6 +867,7 @@ useHead({
               >
                 Gol</button
               ><button
+                :disabled="!kicker"
                 @click="
                   run(async () => {
                     await ops.kick(selected, kicker, false);
@@ -823,7 +883,68 @@ useHead({
             @click="run(() => ops.finishShootout(selected), 'Tanda y partido finalizados.')"
           >
             Confirmar resultado y finalizar partido
-          </button></ManagementPanel
+          </button>
+          <form
+            v-if="match.shootout.status === 'in_progress'"
+            class="shootout-reduction"
+            @submit.prevent="
+              run(
+                () =>
+                  ops.reduceShootoutParticipants(
+                    selected,
+                    unavailablePlayer,
+                    departureReason,
+                    opponentExcludedPlayer,
+                  ),
+                'Participantes de la tanda actualizados.',
+              )
+            "
+          >
+            <h3>Actualizar participantes</h3>
+            <p>
+              Si alguien queda fuera por lesión o expulsión, excluye a un participante rival para
+              mantener la misma cantidad de lanzadores.
+            </p>
+            <label
+              >Equipo afectado<AppSelect v-model="shootoutSide"
+                ><option value="home">{{ match.home_team.name }}</option>
+                <option value="away">{{ match.away_team.name }}</option></AppSelect
+              ></label
+            >
+            <label
+              >Jugador que deja la tanda<AppSelect v-model="unavailablePlayer" required
+                ><option value="">Selecciona participante</option>
+                <option
+                  v-for="participant in unavailableParticipants"
+                  :key="participant.playerId"
+                  :value="participant.playerId"
+                >
+                  {{ participant.name }}
+                </option></AppSelect
+              ></label
+            >
+            <label
+              >Motivo<AppSelect v-model="departureReason"
+                ><option value="injury">Lesión</option>
+                <option value="sent_off">Expulsión</option></AppSelect
+              ></label
+            >
+            <label
+              >Participante rival excluido<AppSelect v-model="opponentExcludedPlayer" required
+                ><option value="">Selecciona participante</option>
+                <option
+                  v-for="participant in opponentParticipants"
+                  :key="participant.playerId"
+                  :value="participant.playerId"
+                >
+                  {{ participant.name }}
+                </option></AppSelect
+              ></label
+            >
+            <button :disabled="!unavailablePlayer || !opponentExcludedPlayer">
+              Confirmar reducción
+            </button>
+          </form></ManagementPanel
         >
       </template>
     </div>
@@ -850,6 +971,9 @@ useHead({
 .columns.creation-layout {
   grid-template-columns: minmax(0, 720px);
   justify-content: center;
+}
+.columns.manage-layout > .match-selector {
+  grid-column: 1 / -1;
 }
 .management-panel-heading {
   display: flex;
@@ -985,6 +1109,14 @@ form {
   gap: 12px;
   margin-top: 22px;
 }
+.columns.manage-layout > :deep(.tactical-panel) {
+  grid-column: 1 / -1;
+}
+.tactical-teams {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
 .live-control-heading {
   display: flex;
   align-items: center;
@@ -1060,6 +1192,9 @@ form {
 }
 @media (max-width: 850px) {
   .columns {
+    grid-template-columns: 1fr;
+  }
+  .tactical-teams {
     grid-template-columns: 1fr;
   }
   .added-time-control {

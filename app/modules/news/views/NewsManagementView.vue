@@ -3,17 +3,20 @@ import PageHeading from "~/components/PageHeading.vue";
 import ManagementPanel from "~/components/ManagementPanel.vue";
 import AppSelect from "~/components/AppSelect.vue";
 import NewsContentEditor from "~/modules/news/components/NewsContentEditor.vue";
-import NewsParagraph from "~/modules/news/components/NewsParagraph.vue";
 import { useNewsManagement } from "~/modules/news/composables/useNewsManagement";
 import { newsDate } from "~/modules/news/data/news";
-import { newsPreview } from "~/modules/news/utils/preview";
+import {
+  NEWS_CONTENT_MAX_LENGTH,
+  NEWS_PREVIEW_MAX_LENGTH,
+  newsPreview,
+} from "~/modules/news/utils/preview";
 import { useTeams } from "~/modules/teams/composables/useTeams";
 
-const MAX_CONTENT_LENGTH = 500;
 const { items, get, save, act } = useNewsManagement();
 const { teams } = useTeams();
 const selected = ref(""),
   title = ref(""),
+  preview = ref(""),
   team = ref(""),
   content = ref(""),
   date = ref(""),
@@ -26,11 +29,23 @@ const visible = computed(() =>
   items.value.filter((item) => filter.value === "all" || item.status === filter.value),
 );
 const previewParagraph = computed(
-  () => content.value.split(/\n\s*\n/).find((paragraph) => newsPreview([paragraph])) ?? "",
+  () =>
+    preview.value.trim() ||
+    content.value
+      .split(/\n\s*\n/)
+      .find((paragraph) => !/^<h[1-4]>/.test(paragraph) && newsPreview([paragraph])) ||
+    "",
 );
 const savedSnapshot = ref("");
 const formSnapshot = computed(() =>
-  JSON.stringify([selected.value, title.value, team.value, content.value, cover.value]),
+  JSON.stringify([
+    selected.value,
+    title.value,
+    preview.value,
+    team.value,
+    content.value,
+    cover.value,
+  ]),
 );
 useUnsavedChanges(
   computed(() =>
@@ -57,6 +72,7 @@ async function edit(id = "") {
   const item = id ? await get(id) : undefined;
   selected.value = id;
   title.value = item?.title ?? "";
+  preview.value = item?.preview ?? "";
   team.value = item?.team_id ?? "";
   content.value = item?.content.children.join("\n\n") ?? "";
   cover.value = item?.cover_image ?? null;
@@ -70,14 +86,15 @@ async function submit() {
     error.value = "Escribe el contenido de la noticia antes de guardarla.";
     return;
   }
-  if (contentLength.value > MAX_CONTENT_LENGTH) {
-    error.value = "El contenido no puede superar los 500 caracteres.";
+  if (contentLength.value > NEWS_CONTENT_MAX_LENGTH) {
+    error.value = `El contenido no puede superar los ${NEWS_CONTENT_MAX_LENGTH} caracteres.`;
     return;
   }
   await run(async () => {
     await save(
       {
         title: title.value,
+        preview: preview.value,
         team_id: team.value || null,
         cover_image: cover.value,
         content: { children: content.value.split(/\n\s*\n/) },
@@ -125,6 +142,14 @@ useHead({ title: "Administrar noticias · Matchday" });
         <form @submit.prevent="submit">
           <label>Título<input v-model="title" maxlength="200" required /></label>
           <label
+            >Preview (opcional)<textarea
+              v-model="preview"
+              :maxlength="NEWS_PREVIEW_MAX_LENGTH"
+              rows="3"
+              placeholder="Si la dejas vacía, usaremos el primer párrafo."
+            />
+          </label>
+          <label
             >Equipo<AppSelect v-model="team" :disabled="!!selected"
               ><option value="">Noticia general</option>
               <option v-for="club in teams" :key="club.id" :value="club.id">
@@ -134,7 +159,7 @@ useHead({ title: "Administrar noticias · Matchday" });
           >
           <NewsContentEditor
             v-model="content"
-            :limit="MAX_CONTENT_LENGTH"
+            :limit="NEWS_CONTENT_MAX_LENGTH"
             @count="contentLength = $event"
           />
           <label
@@ -148,10 +173,9 @@ useHead({ title: "Administrar noticias · Matchday" });
             Quitar portada
           </button>
           <div class="notice formatted-preview">
-            <strong>Vista previa:</strong
-            ><NewsParagraph v-if="previewParagraph" :text="previewParagraph" /><span v-else
-              >Sin contenido</span
-            >
+            <strong>Vista previa:</strong>
+            <p v-if="previewParagraph">{{ newsPreview([previewParagraph]) }}</p>
+            <span v-else>Sin contenido</span>
           </div>
           <div class="actions">
             <button type="submit">Guardar borrador</button

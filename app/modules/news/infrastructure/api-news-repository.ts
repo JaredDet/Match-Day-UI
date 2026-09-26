@@ -40,12 +40,14 @@ export class ApiNewsRepository implements NewsRepository {
     if (!file)
       return {
         title: input.title,
+        preview: input.preview,
         ...(includeTeam ? { team_id: input.team_id } : {}),
         content: input.content,
         ...(input.cover_image === null ? { cover_image: null } : {}),
       };
     const body = new FormData();
     body.append("title", input.title);
+    body.append("preview", input.preview);
     if (includeTeam && input.team_id) body.append("team_id", input.team_id);
     body.append("content", JSON.stringify(input.content));
     body.append("cover_image", file);

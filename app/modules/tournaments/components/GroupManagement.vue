@@ -11,7 +11,25 @@ const manager = useTournamentManagement(),
 const team = ref(""),
   match = ref(""),
   day = ref(1),
+  editedName = ref(props.group.name),
+  fixtureDays = reactive<Record<string, number>>({}),
+  fixturePositions = reactive<Record<string, number>>({}),
   order = ref<string[]>([]);
+watch(
+  () => props.group.name,
+  (value) => (editedName.value = value),
+  { immediate: true },
+);
+watch(
+  () => props.phase.fixtures,
+  (fixtures) => {
+    for (const fixture of fixtures) {
+      fixtureDays[fixture.id] = fixture.matchday;
+      fixturePositions[fixture.id] = fixture.position;
+    }
+  },
+  { immediate: true, deep: true },
+);
 watch(
   () => props.group.teams.join(","),
   () => {
@@ -48,7 +66,11 @@ function move(index: number, offset: number) {
 </script>
 <template>
   <ManagementPanel :title="`Grupo ${group.name} · ${group.teams.length}/${capacity}`"
-    ><p v-if="group.teams.length >= capacity">Grupo completo</p>
+    ><form @submit.prevent="emit('feedback', () => manager.updateGroup(group.id, editedName))">
+      <label>Nombre del grupo<input v-model="editedName" required maxlength="30" /></label>
+      <button :disabled="disabled || editedName === group.name">Guardar nombre</button>
+    </form>
+    <p v-if="group.teams.length >= capacity">Grupo completo</p>
     <ul>
       <li v-for="id in group.teams" :key="id">
         <div class="actions">
@@ -106,14 +128,41 @@ function move(index: number, offset: number) {
     ><NuxtLink to="/matches/create">Crear partido</NuxtLink>
     <div
       v-for="f in phase.fixtures.filter((f) => f.group === group.id)"
-      :key="f.match"
+      :key="f.id"
       class="actions"
     >
       <NuxtLink :to="`/matches/manage/${f.match}`"
         >Jornada {{ f.matchday }} ·
         {{ manager.matches.value.find((m) => m.id === f.match)?.home_team.name }} –
         {{ manager.matches.value.find((m) => m.id === f.match)?.away_team.name }}</NuxtLink
-      ><button
+      ><label
+        >Jornada<input
+          v-model.number="fixtureDays[f.id]"
+          type="number"
+          min="1"
+          :max="phase.matchdays"
+          :disabled="disabled"
+      /></label>
+      <label
+        >Orden<input
+          v-model.number="fixturePositions[f.id]"
+          type="number"
+          min="0"
+          :disabled="disabled"
+      /></label>
+      <button
+        :disabled="
+          disabled || (fixtureDays[f.id] === f.matchday && fixturePositions[f.id] === f.position)
+        "
+        @click="
+          emit('feedback', () =>
+            manager.updateFixture(f.id, fixtureDays[f.id]!, fixturePositions[f.id]!),
+          )
+        "
+      >
+        Guardar fixture
+      </button>
+      <button
         :disabled="disabled"
         @click="emit('feedback', () => manager.unfixture(phase.id, f.match))"
       >

@@ -201,6 +201,13 @@ export function useMatchOperations() {
     });
     await refresh(id);
   }
+  async function updateDetails(id: string, stadiumName: string, refereeName: string) {
+    await repositories.matches.command(id, "details/", "PATCH", {
+      stadium_name: stadiumName,
+      referee_name: refereeName,
+    });
+    await refresh(id);
+  }
   async function event(
     id: string,
     _side: Side,
@@ -302,6 +309,19 @@ export function useMatchOperations() {
     await repositories.matches.command(id, "penalty-shootout/finish/", "POST");
     await refresh(id);
   }
+  async function reduceShootoutParticipants(
+    id: string,
+    unavailablePlayerId: string,
+    departureReason: "injury" | "sent_off",
+    opponentExcludedPlayerId: string,
+  ) {
+    await repositories.matches.command(id, "penalty-shootout/participants/reduce/", "POST", {
+      unavailable_player_id: unavailablePlayerId,
+      departure_reason: departureReason,
+      opponent_excluded_player_id: opponentExcludedPlayerId,
+    });
+    await refresh(id);
+  }
   return {
     matches,
     operations,
@@ -315,6 +335,7 @@ export function useMatchOperations() {
     activePlayers,
     period,
     setAddedTime,
+    updateDetails,
     event,
     statistic,
     possession,
@@ -322,5 +343,6 @@ export function useMatchOperations() {
     shootout,
     kick,
     finishShootout,
+    reduceShootoutParticipants,
   };
 }

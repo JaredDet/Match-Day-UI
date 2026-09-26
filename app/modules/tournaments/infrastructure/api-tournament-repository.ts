@@ -94,6 +94,12 @@ export class ApiTournamentRepository implements TournamentRepository {
     });
     return result.id;
   }
+  updatePhase(
+    id: string,
+    input: Partial<Pick<PhaseDto, "name" | "kind" | "order" | "qualifying_teams" | "matchdays">>,
+  ) {
+    return this.http.request<void>(`tournament-phases/${id}/`, { method: "PATCH", body: input });
+  }
   updatePhaseStatus(id: string, status: PhaseDto["status"]) {
     return this.http.request<void>(`tournament-phases/${id}/status/`, {
       method: "PUT",
@@ -112,6 +118,12 @@ export class ApiTournamentRepository implements TournamentRepository {
       body: { phase, name },
     });
     return result.id;
+  }
+  updateGroup(id: string, name: string) {
+    return this.http.request<void>(`tournament-groups/${id}/`, {
+      method: "PATCH",
+      body: { name },
+    });
   }
   deleteGroup(id: string) {
     return this.http.request<void>(`tournament-groups/${id}/`, { method: "DELETE" });
@@ -150,6 +162,9 @@ export class ApiTournamentRepository implements TournamentRepository {
       body: input,
     });
     return result.id;
+  }
+  updateFixture(id: string, input: Partial<Pick<FixtureDto, "position" | "matchday">>) {
+    return this.http.request<void>(`tournament-fixtures/${id}/`, { method: "PATCH", body: input });
   }
   deleteFixture(id: string) {
     return this.http.request<void>(`tournament-fixtures/${id}/`, { method: "DELETE" });

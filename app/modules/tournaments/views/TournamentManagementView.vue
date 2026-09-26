@@ -16,6 +16,11 @@ const tournamentId = ref(String(useRoute().query.tournament ?? tournaments.value
   cap = ref(4),
   edition = ref(""),
   phaseName = ref("Fase de grupos"),
+  editedPhaseName = ref(""),
+  editedPhaseKind = ref<"groups" | "knockout" | "third_place">("groups"),
+  editedPhaseOrder = ref(0),
+  editedQualifying = ref(2),
+  editedMatchdays = ref(6),
   qualifying = ref(2),
   matchdays = ref(6),
   phaseId = ref(""),
@@ -32,6 +37,14 @@ const tournament = computed(() => tournaments.value.find((t) => t.id === tournam
   currentPhases = computed(() => phases.value.filter((p) => p.season === seasonId.value)),
   selectedPhase = computed(() => currentPhases.value.find((p) => p.id === phaseId.value)),
   enrolled = computed(() => registrations.value[seasonId.value] ?? []);
+watch(selectedPhase, (phase) => {
+  if (!phase) return;
+  editedPhaseName.value = phase.name;
+  editedPhaseKind.value = phase.kind;
+  editedPhaseOrder.value = phase.order;
+  editedQualifying.value = phase.qualifying;
+  editedMatchdays.value = phase.matchdays;
+});
 watchEffect(() => {
   if (!tournamentId.value && tournaments.value[0]) tournamentId.value = tournaments.value[0].id;
 });
@@ -184,42 +197,78 @@ useHead({ title: "Gestionar torneos · Matchday" });
           <label
             >Fase<AppSelect v-model="phaseId"
               ><option value="">Selecciona fase</option>
-              <option
-                v-for="p in currentPhases.filter((p) => p.kind === 'groups')"
-                :key="p.id"
-                :value="p.id"
-              >
+              <option v-for="p in currentPhases" :key="p.id" :value="p.id">
                 {{ p.name }}
               </option></AppSelect
             ></label
           ><template v-if="selectedPhase"
-            ><label>Nombre de grupo<input v-model="groupName" placeholder="A" /></label>
-            <div class="actions">
-              <button
-                @click="
-                  run(async () => {
-                    await manager.addGroup(phaseId, groupName);
-                    groupName = '';
-                  })
-                "
+            ><form
+              class="phase-editor"
+              @submit.prevent="
+                run(() =>
+                  manager.updatePhase(phaseId, {
+                    name: editedPhaseName,
+                    kind: editedPhaseKind,
+                    order: editedPhaseOrder,
+                    qualifying_teams: editedQualifying,
+                    matchdays: editedMatchdays,
+                  }),
+                )
+              "
+            >
+              <h3>Editar fase</h3>
+              <label>Nombre<input v-model="editedPhaseName" required /></label>
+              <label
+                >Tipo<AppSelect v-model="editedPhaseKind"
+                  ><option value="groups">Grupos</option>
+                  <option value="knockout">Eliminatoria</option>
+                  <option value="third_place">Tercer puesto</option></AppSelect
+                ></label
               >
-                Crear grupo</button
-              ><button @click="run(() => manager.finishGroups(phaseId))">
-                Finalizar fase de grupos</button
-              ><button
-                @click="
-                  run(async () => {
-                    await manager.removePhase(phaseId);
-                    phaseId = '';
-                  })
-                "
-              >
-                Eliminar fase vacía
-              </button>
-            </div></template
+              <label
+                >Orden<input v-model.number="editedPhaseOrder" type="number" min="0" required
+              /></label>
+              <label
+                >Clasificados por grupo<input
+                  v-model.number="editedQualifying"
+                  type="number"
+                  min="0"
+                  required
+              /></label>
+              <label
+                >Jornadas<input v-model.number="editedMatchdays" type="number" min="1" required
+              /></label>
+              <button :disabled="manager.locked(seasonId)">Guardar cambios de fase</button>
+            </form>
+            <template v-if="selectedPhase.kind === 'groups'">
+              <label>Nombre de grupo<input v-model="groupName" placeholder="A" /></label>
+              <div class="actions">
+                <button
+                  @click="
+                    run(async () => {
+                      await manager.addGroup(phaseId, groupName);
+                      groupName = '';
+                    })
+                  "
+                >
+                  Crear grupo</button
+                ><button @click="run(() => manager.finishGroups(phaseId))">
+                  Finalizar fase de grupos</button
+                ><button
+                  @click="
+                    run(async () => {
+                      await manager.removePhase(phaseId);
+                      phaseId = '';
+                    })
+                  "
+                >
+                  Eliminar fase vacía
+                </button>
+              </div>
+            </template></template
           ></ManagementPanel
         >
-        <template v-if="selectedPhase"
+        <template v-if="selectedPhase?.kind === 'groups'"
           ><GroupManagement
             v-for="group in selectedPhase.groups"
             :key="group.id"

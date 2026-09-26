@@ -54,6 +54,12 @@ function positionCode(slot: number) {
     ? positionCodes[player.preferredPosition]
     : formationRole(slot).code;
 }
+function positionName(slot: number) {
+  const player = playerFor(slot);
+  return player?.preferredPosition
+    ? positionNames[player.preferredPosition]
+    : formationRole(slot).name;
+}
 function isFree(slot: number, x: number, y: number, rect: DOMRect) {
   return positions.value.every((position) => {
     if (position.slot === slot) return true;
@@ -144,14 +150,19 @@ onBeforeUnmount(() => {
         @keydown="moveWithKeyboard($event, position.slot)"
       >
         <strong>{{ playerFor(position.slot)?.number ?? position.slot }}</strong>
-        <span v-if="playerFor(position.slot)" class="position-code">
-          {{ positionCode(position.slot) }}
-        </span>
-        <span v-if="playerFor(position.slot)" class="player-name">{{
-          playerFor(position.slot)?.name
-        }}</span>
       </button>
     </div>
+    <ul class="lineup-legend" aria-label="Leyenda de jugadores y posiciones">
+      <li v-for="position in positions" :key="position.slot">
+        <span class="legend-number">{{ playerFor(position.slot)?.number ?? position.slot }}</span>
+        <span class="legend-player">
+          <strong>{{
+            playerFor(position.slot)?.name ?? `Sin asignar · Posición ${position.slot}`
+          }}</strong>
+          <span>{{ positionCode(position.slot) }} · {{ positionName(position.slot) }}</span>
+        </span>
+      </li>
+    </ul>
     <p class="position-hint">
       Se muestra la posición preferida si está definida; si no, la línea táctica del jugador.
     </p>
@@ -223,47 +234,60 @@ onBeforeUnmount(() => {
   color: white;
 }
 .formation-player.assigned {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+}
+.formation-player strong {
+  font-size: 16px;
+  line-height: 1;
+}
+.lineup-legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px 16px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.lineup-legend li {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  width: 58px;
-  height: 58px;
-  padding: 5px;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
 }
-.formation-player strong,
-.formation-player span {
-  font-size: 10px;
-  line-height: 1.1;
-}
-.formation-player .position-code {
-  position: static;
-  display: block;
-  width: auto;
-  overflow: visible;
-  transform: none;
+.legend-number {
+  display: grid;
+  place-items: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--surface-strong, #20262b);
   color: var(--accent, #b6ff5c);
-  font-size: 9px;
-  font-weight: 700;
+  font-weight: 800;
 }
-.formation-player .player-name {
-  display: block;
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 50%;
-  width: 120px;
-  padding: 2px 4px;
-  border-radius: 4px;
-  background: #101510d9;
-  transform: translateX(-50%);
-  color: white;
-  pointer-events: none;
+.legend-player {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.legend-player strong {
   overflow: hidden;
-  font-size: 10px;
-  line-height: 1.1;
-  text-shadow: 0 1px 3px #000;
+  color: var(--text-color);
+  font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.legend-player > span {
+  color: var(--muted);
+  font-size: 11px;
 }
 .formation-player.dragging {
   z-index: 3;

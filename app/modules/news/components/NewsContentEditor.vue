@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { Node } from "@tiptap/core";
 import Bold from "@tiptap/extension-bold";
 import CharacterCount from "@tiptap/extension-character-count";
@@ -128,49 +128,54 @@ onBeforeUnmount(() => editor.value?.destroy());
   <div class="editor-field">
     <span id="news-content-label">Contenido</span>
     <div v-if="editor" class="format-toolbar" aria-label="Formato del contenido">
-      <button
-        type="button"
-        title="Negrita"
-        aria-label="Aplicar negrita"
-        :class="{ active: editor.isActive('bold') }"
-        :aria-pressed="editor.isActive('bold')"
-        @click="editor.chain().focus().toggleBold().run()"
-      >
-        <strong>N</strong>
-      </button>
-      <button
-        type="button"
-        title="Cursiva"
-        aria-label="Aplicar cursiva"
-        :class="{ active: editor.isActive('italic') }"
-        :aria-pressed="editor.isActive('italic')"
-        @click="editor.chain().focus().toggleItalic().run()"
-      >
-        <em>C</em>
-      </button>
-      <button
-        type="button"
-        title="Párrafo normal"
-        aria-label="Aplicar párrafo normal"
-        :class="{ active: editor.isActive('paragraph') }"
-        :aria-pressed="editor.isActive('paragraph')"
-        @click="editor.chain().focus().setNode('paragraph').run()"
-      >
-        P
-      </button>
-      <button
-        v-for="level in headingLevels"
-        :key="level"
-        type="button"
-        :title="`Encabezado ${level}`"
-        :aria-label="`Aplicar encabezado nivel ${level}`"
-        :class="{ active: editor.isActive(`heading${level}`) }"
-        :aria-pressed="editor.isActive(`heading${level}`)"
-        @click="editor.chain().focus().setNode(`heading${level}`).run()"
-      >
-        H{{ level }}
-      </button>
-      <span>Selecciona texto o activa el formato antes de escribir</span>
+      <div class="toolbar-group" role="group" aria-label="Formato de texto">
+        <button
+          type="button"
+          title="Negrita"
+          aria-label="Aplicar negrita"
+          :class="{ active: editor.isActive('bold') }"
+          :aria-pressed="editor.isActive('bold')"
+          @click="editor.chain().focus().toggleBold().run()"
+        >
+          <strong>N</strong><span>Negrita</span>
+        </button>
+        <button
+          type="button"
+          title="Cursiva"
+          aria-label="Aplicar cursiva"
+          :class="{ active: editor.isActive('italic') }"
+          :aria-pressed="editor.isActive('italic')"
+          @click="editor.chain().focus().toggleItalic().run()"
+        >
+          <em>C</em><span>Cursiva</span>
+        </button>
+      </div>
+      <div class="toolbar-group structure-group" role="group" aria-label="Estructura del artículo">
+        <button
+          type="button"
+          title="Párrafo"
+          aria-label="Aplicar párrafo normal"
+          :class="{ active: editor.isActive('paragraph') }"
+          :aria-pressed="editor.isActive('paragraph')"
+          @click="editor.chain().focus().setNode('paragraph').run()"
+        >
+          <span class="format-level">P</span><span>Párrafo</span>
+        </button>
+        <button
+          v-for="level in headingLevels"
+          :key="level"
+          type="button"
+          :title="`Encabezado ${level}`"
+          :aria-label="`Aplicar encabezado nivel ${level}`"
+          :class="{ active: editor.isActive(`heading${level}`) }"
+          :aria-pressed="editor.isActive(`heading${level}`)"
+          @click="editor.chain().focus().setNode(`heading${level}`).run()"
+        >
+          <span class="format-level">H{{ level }}</span
+          ><span>{{ ["Título", "Subtítulo", "Sección", "Subsección"][level - 1] }}</span>
+        </button>
+      </div>
+      <span class="toolbar-hint">Selecciona texto o activa el formato antes de escribir</span>
     </div>
     <EditorContent :editor="editor" :class="{ invalid: limitAttempted }" />
     <div
@@ -208,7 +213,7 @@ onBeforeUnmount(() => editor.value?.destroy());
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   padding: 8px;
   border: 1px solid var(--border);
   border-bottom: 0;
@@ -216,11 +221,29 @@ onBeforeUnmount(() => editor.value?.destroy());
   background: var(--surface);
 }
 .format-toolbar button {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  min-height: 34px;
-  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 9px;
+}
+.toolbar-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.structure-group {
+  padding-left: 12px;
+  border-left: 1px solid var(--border);
+}
+.format-level {
+  color: var(--accent);
+  font-weight: 800;
+}
+.toolbar-hint {
+  flex: 1 1 100%;
+  padding: 2px 4px 0;
 }
 .format-toolbar button.active {
   border-color: var(--accent);
@@ -228,8 +251,8 @@ onBeforeUnmount(() => editor.value?.destroy());
   color: var(--accent);
   box-shadow: inset 0 -2px var(--accent);
 }
-.format-toolbar span {
-  margin-left: 5px;
+.format-toolbar .toolbar-hint {
+  margin-left: 0;
   color: var(--muted);
   font-size: 12px;
   overflow-wrap: anywhere;
@@ -316,7 +339,7 @@ onBeforeUnmount(() => editor.value?.destroy());
   color: var(--ui-danger, #e46f68);
 }
 @media (max-width: 640px) {
-  .format-toolbar span {
+  .format-toolbar .toolbar-hint {
     display: none;
   }
 }

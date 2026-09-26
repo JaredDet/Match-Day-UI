@@ -64,10 +64,15 @@ export interface TournamentRepository {
     qualifying_teams: number;
     matchdays: number;
   }): Promise<string>;
+  updatePhase(
+    id: string,
+    input: Partial<Pick<PhaseDto, "name" | "kind" | "order" | "qualifying_teams" | "matchdays">>,
+  ): Promise<void>;
   updatePhaseStatus(id: string, status: PhaseDto["status"]): Promise<void>;
   deletePhase(id: string): Promise<void>;
   listGroups(phase?: string): Promise<GroupDto[]>;
   createGroup(phase: string, name: string): Promise<string>;
+  updateGroup(id: string, name: string): Promise<void>;
   deleteGroup(id: string): Promise<void>;
   setTieBreak(id: string, teamIds: string[]): Promise<void>;
   listEntries(group?: string): Promise<GroupEntryDto[]>;
@@ -81,6 +86,10 @@ export interface TournamentRepository {
     position: number;
     matchday: number;
   }): Promise<string>;
+  updateFixture(
+    id: string,
+    input: Partial<Pick<FixtureDto, "position" | "matchday">>,
+  ): Promise<void>;
   deleteFixture(id: string): Promise<void>;
   standings(season: string): Promise<unknown[]>;
   bracket(season: string): Promise<unknown>;

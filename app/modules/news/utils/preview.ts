@@ -1,4 +1,5 @@
-export const NEWS_PREVIEW_MAX_LENGTH = 200;
+export const NEWS_CONTENT_MAX_LENGTH = 10000;
+export const NEWS_PREVIEW_MAX_LENGTH = 320;
 export function plainNewsText(value: string) {
   return value
     .replace(/<[^>]*>/g, "")
@@ -19,8 +20,12 @@ export function plainNewsText(value: string) {
     .replace(/\s+/g, " ")
     .trim();
 }
-export function newsPreview(children: string[]) {
-  const text = children.map(plainNewsText).find(Boolean) ?? "";
+export function newsPreview(children: string[], customPreview = "") {
+  const source =
+    customPreview.trim() ||
+    children.find((block) => !/^\s*<h[1-4]>/.test(block) && plainNewsText(block)) ||
+    "";
+  const text = plainNewsText(source);
   const characters = Array.from(text);
   return characters.length <= NEWS_PREVIEW_MAX_LENGTH
     ? text

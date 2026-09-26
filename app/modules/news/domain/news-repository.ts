@@ -6,6 +6,7 @@ export interface NewsListItem extends Omit<DemoNews, "content"> {
 
 export interface SaveNewsInput {
   title: string;
+  preview: string;
   team_id: string | null;
   cover_image: string | null;
   content: { children: string[] };
