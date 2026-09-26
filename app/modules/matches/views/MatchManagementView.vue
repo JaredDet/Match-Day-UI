@@ -443,6 +443,7 @@ useHead({
             <FormationEditor
               v-model="formationLayout[which]"
               :players="formationPlayers(which)"
+              :formation="formationShape[which]"
               compact
             />
             <label v-for="p in roster(match[`${which}_team`].id)" :key="p.id" class="check"
@@ -502,6 +503,7 @@ useHead({
             <FormationEditor
               v-model="formationLayout[which]"
               :players="formationPlayers(which)"
+              :formation="formationShape[which]"
               compact
             />
             <button

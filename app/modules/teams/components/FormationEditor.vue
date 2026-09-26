@@ -7,6 +7,7 @@ const positions = defineModel<FormationPosition[]>({ required: true });
 const props = withDefaults(
   defineProps<{
     compact?: boolean;
+    formation?: string;
     players?: Array<{
       id: string;
       name: string;
@@ -15,7 +16,7 @@ const props = withDefaults(
     }>;
     collisionRadius?: number;
   }>(),
-  { compact: false, players: () => [], collisionRadius: 30 },
+  { compact: false, formation: "4-3-3", players: () => [], collisionRadius: 30 },
 );
 const pitch = ref<HTMLElement>();
 const draggingSlot = ref<number | null>(null);
@@ -23,16 +24,35 @@ const draggingSlot = ref<number | null>(null);
 function playerFor(slot: number) {
   return props.players[slot - 1];
 }
+function formationRole(slot: number) {
+  const counts = [1, ...props.formation.split("-").map(Number)];
+  let firstSlot = 1;
+  for (const [lineIndex, count] of counts.entries()) {
+    const lastSlot = firstSlot + count - 1;
+    if (slot >= firstSlot && slot <= lastSlot) {
+      if (lineIndex === 0) return { code: "POR", name: "Portero" };
+      if (lineIndex === counts.length - 1) return { code: "DEL", name: "Delantero" };
+      if (lineIndex === 1) return { code: "DEF", name: "Defensa" };
+      return { code: "MED", name: "Mediocampo" };
+    }
+    firstSlot = lastSlot + 1;
+  }
+  return { code: "JUG", name: "Jugador" };
+}
 function playerLabel(slot: number) {
   const player = playerFor(slot);
   if (!player) return `Posición ${slot}`;
+  const role = formationRole(slot);
   const preferredPosition = player.preferredPosition
-    ? positionNames[player.preferredPosition]
-    : "Sin posición asignada";
-  return `${player.name}, posición preferida: ${preferredPosition}`;
+    ? ` Posición preferida: ${positionNames[player.preferredPosition]}.`
+    : "";
+  return `${player.name}. Posición táctica: ${role.name}.${preferredPosition}`;
 }
-function positionCode(position: Position | null | undefined) {
-  return position ? positionCodes[position] : "";
+function positionCode(slot: number) {
+  const player = playerFor(slot);
+  return player?.preferredPosition
+    ? positionCodes[player.preferredPosition]
+    : formationRole(slot).code;
 }
 function isFree(slot: number, x: number, y: number, rect: DOMRect) {
   return positions.value.every((position) => {
@@ -124,16 +144,16 @@ onBeforeUnmount(() => {
         @keydown="moveWithKeyboard($event, position.slot)"
       >
         <strong>{{ playerFor(position.slot)?.number ?? position.slot }}</strong>
-        <span v-if="playerFor(position.slot)?.preferredPosition" class="position-code">{{
-          positionCode(playerFor(position.slot)?.preferredPosition)
-        }}</span>
+        <span v-if="playerFor(position.slot)" class="position-code">
+          {{ positionCode(position.slot) }}
+        </span>
         <span v-if="playerFor(position.slot)" class="player-name">{{
           playerFor(position.slot)?.name
         }}</span>
       </button>
     </div>
     <p class="position-hint">
-      Las siglas indican la posición preferida; puedes mover cada jugador libremente por la cancha.
+      Se muestra la posición preferida si está definida; si no, la línea táctica del jugador.
     </p>
     <div v-if="!props.compact" class="coordinate-grid">
       <fieldset v-for="position in positions" :key="position.slot">
@@ -168,12 +188,18 @@ onBeforeUnmount(() => {
   position: relative;
   aspect-ratio: 1.55;
   width: 100%;
-  min-height: 320px;
+  max-width: none;
+  min-height: 360px;
   overflow: hidden;
   border: 1px solid #b8d8a8;
   border-radius: 12px;
   background: repeating-linear-gradient(90deg, #397536 0 12.5%, #44813f 12.5% 25%);
   user-select: none;
+}
+.formation-editor {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
 }
 .formation-pitch::after {
   content: "";
@@ -225,7 +251,10 @@ onBeforeUnmount(() => {
   position: absolute;
   top: calc(100% + 4px);
   left: 50%;
-  width: 110px;
+  width: 120px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: #101510d9;
   transform: translateX(-50%);
   color: white;
   pointer-events: none;
