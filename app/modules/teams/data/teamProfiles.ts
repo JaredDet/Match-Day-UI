@@ -4,27 +4,9 @@ import type {
   TeamDetail,
   TeamSummary,
   PlayerDetail,
-  Position,
   Result,
+  Position,
 } from "~/modules/teams/types/teams";
-export const positionNames: Record<Position, string> = {
-  goalkeeper: "Portero",
-  right_back: "Lateral derecho",
-  center_back: "Defensa central",
-  left_back: "Lateral izquierdo",
-  sweeper: "Líbero",
-  right_wing_back: "Carrilero derecho",
-  left_wing_back: "Carrilero izquierdo",
-  defensive_midfielder: "Mediocentro defensivo",
-  central_midfielder: "Mediocentro",
-  attacking_midfielder: "Mediapunta",
-  right_midfielder: "Volante derecho",
-  left_midfielder: "Volante izquierdo",
-  right_winger: "Extremo derecho",
-  left_winger: "Extremo izquierdo",
-  second_striker: "Segundo delantero",
-  center_forward: "Delantero centro",
-};
 export const resultNames: Record<Result, string> = {
   win: "Victoria",
   draw: "Empate",

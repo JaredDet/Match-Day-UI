@@ -76,10 +76,21 @@ export class ApiMatchRepository implements MatchRepository {
         : undefined,
     } as Match;
   }
-  async create(homeTeamId: string, awayTeamId: string, scheduledAt: string) {
+  async create(
+    homeTeamId: string,
+    awayTeamId: string,
+    scheduledAt: string,
+    formations?: { home: string; away: string },
+  ) {
     const result = await this.http.request<{ id: string }>("matches/", {
       method: "POST",
-      body: { home_team_id: homeTeamId, away_team_id: awayTeamId, scheduled_at: scheduledAt },
+      body: {
+        home_team_id: homeTeamId,
+        away_team_id: awayTeamId,
+        scheduled_at: scheduledAt,
+        home_formation: formations?.home,
+        away_formation: formations?.away,
+      },
     });
     return result.id;
   }

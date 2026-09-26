@@ -6,6 +6,8 @@ export interface RecommendationItemDto {
   title: string;
   endpoint: string;
   preview: string;
+  image?: string | null;
+  team_ids: string[];
   score: number;
   reason:
     | "similar_visitors"

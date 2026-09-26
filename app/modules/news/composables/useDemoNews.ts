@@ -32,8 +32,12 @@ export function useDemoNews() {
     )
       throw new Error("El contenido admite un máximo de 500 caracteres de texto.");
     for (const paragraph of input.content.children) {
+      const heading = paragraph.match(/^<(h[1-4])>([\s\S]*)<\/\1>$/);
+      if (/^<h[1-4]>/.test(paragraph) && !heading)
+        throw new Error("Revisa el nivel del encabezado.");
+      const content = heading?.[2] ?? paragraph;
       const tags: string[] = [];
-      for (const token of paragraph.match(/<[^>]*>/g) ?? []) {
+      for (const token of content.match(/<[^>]*>/g) ?? []) {
         if (!/^<\/?[bi]>$/.test(token))
           throw new Error("Solo se permite formato <b> y <i>, sin atributos.");
         if (token.startsWith("</")) {

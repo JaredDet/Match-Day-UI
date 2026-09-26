@@ -2,7 +2,7 @@
 import AppSelect from "~/components/AppSelect.vue";
 import RegistrationSteps from "~/components/RegistrationSteps.vue";
 import PageHeading from "~/components/PageHeading.vue";
-import { positionNames } from "~/modules/teams/data/teamProfiles";
+import { positionNames } from "~/modules/teams/data/position-names";
 import { useTeamRegistration } from "~/modules/teams/composables/useTeamRegistration";
 
 const { name, coach, crest, city, stadium, foundedYear, players, error, validate, submit } =

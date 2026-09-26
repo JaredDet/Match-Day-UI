@@ -103,13 +103,13 @@ function move(index: number, offset: number) {
       "
     >
       Vincular partido</button
-    ><NuxtLink to="/matches/manage">Crear u operar partidos</NuxtLink>
+    ><NuxtLink to="/matches/create">Crear partido</NuxtLink>
     <div
       v-for="f in phase.fixtures.filter((f) => f.group === group.id)"
       :key="f.match"
       class="actions"
     >
-      <NuxtLink :to="`/matches/manage?match=${f.match}`"
+      <NuxtLink :to="`/matches/manage/${f.match}`"
         >Jornada {{ f.matchday }} ·
         {{ manager.matches.value.find((m) => m.id === f.match)?.home_team.name }} –
         {{ manager.matches.value.find((m) => m.id === f.match)?.away_team.name }}</NuxtLink

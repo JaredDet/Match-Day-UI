@@ -76,9 +76,12 @@ async function showHome(onlyFavorites: boolean) {
       >
       <NuxtLink
         class="nav-item"
-        :class="{ active: route.path === '/matches/manage' }"
+        :class="{
+          active:
+            route.path.startsWith('/matches/manage') || route.path.startsWith('/matches/create'),
+        }"
         to="/matches/manage"
-        >Operar partidos</NuxtLink
+        >Gestionar partidos</NuxtLink
       >
     </nav>
     <button

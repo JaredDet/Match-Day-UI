@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { positionNames } from "~/modules/teams/data/teamProfiles";
+import { positionNames } from "~/modules/teams/data/position-names";
 import { usePlayers, useTeams } from "~/modules/teams/composables/useTeams";
 const { players: catalog } = usePlayers(),
   { teams } = useTeams(),

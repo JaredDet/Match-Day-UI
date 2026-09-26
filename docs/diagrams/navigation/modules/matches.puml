@@ -7,12 +7,14 @@ skinparam linetype ortho
 rectangle "Calendario\n/" as List
 rectangle "Favoritos\n/" as Favorites
 rectangle "Detalle\n/matches/:id" as Detail
-rectangle "Operación\n/matches/manage" as Manage
+rectangle "Crear partido\n/matches/create" as Create
+rectangle "Panel de partido\n/matches/manage/:id" as Manage
 
 List --> Detail : abrir tarjeta
 Favorites --> Detail : abrir favorito
 Detail --> List : volver
 Detail --> Manage : operar
+Create --> Manage : partido creado
 Manage --> Detail : consultar acta
 Manage --> List : volver al calendario
 

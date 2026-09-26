@@ -6,8 +6,18 @@ const props = withDefaults(
     title?: string;
     limit?: number;
     kinds?: Array<"news" | "match" | "tournament" | "team" | "player">;
+    teamIds?: string[];
+    affinityOnly?: boolean;
+    compact?: boolean;
   }>(),
-  { title: "También podría interesarte", limit: 3, kinds: () => [] },
+  {
+    title: "También podría interesarte",
+    limit: 3,
+    kinds: () => [],
+    teamIds: () => [],
+    affinityOnly: false,
+    compact: false,
+  },
 );
 const route = useRoute();
 const { sections } = useRecommendations();
@@ -25,13 +35,16 @@ const items = computed(() => {
     .filter(
       (item, index, all) =>
         item.path !== route.path &&
+        (!props.affinityOnly ||
+          item.preferredTeam ||
+          item.teams.some((teamId) => props.teamIds.includes(teamId))) &&
         all.findIndex((candidate) => candidate.key === item.key) === index,
     )
     .slice(0, props.limit);
 });
 </script>
 <template>
-  <aside v-if="items.length" class="rail" aria-label="Recomendaciones">
+  <aside v-if="items.length" class="rail" :class="{ compact }" aria-label="Recomendaciones">
     <div class="rail-heading">
       <div>
         <span>PARA TI</span>
@@ -72,6 +85,26 @@ h2 {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
   gap: 18px;
 }
+.rail.compact {
+  margin-top: 8px;
+  padding-top: 30px;
+}
+.rail.compact .rail-heading h2 {
+  font-size: clamp(22px, 2.5vw, 30px);
+}
+.rail.compact .rail-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.rail.compact :deep(.visual) {
+  min-height: 120px;
+}
+.rail.compact :deep(.card-copy) {
+  gap: 10px;
+  padding: 16px;
+}
+.rail.compact :deep(.card-copy h3) {
+  font-size: 18px;
+}
 @media (max-width: 800px) {
   .rail-grid {
     grid-template-columns: 1fr;
@@ -79,6 +112,9 @@ h2 {
   .rail-heading {
     align-items: start;
     flex-direction: column;
+  }
+  .rail.compact .rail-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

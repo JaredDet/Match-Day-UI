@@ -8,7 +8,12 @@ export interface MatchRepository {
     scheduledTo?: string;
   }): Promise<Match[]>;
   get(id: string, trackNavigation?: boolean): Promise<Match>;
-  create(homeTeamId: string, awayTeamId: string, scheduledAt: string): Promise<string>;
+  create(
+    homeTeamId: string,
+    awayTeamId: string,
+    scheduledAt: string,
+    formations?: { home: string; away: string },
+  ): Promise<string>;
   command<T = void>(
     id: string,
     path: string,

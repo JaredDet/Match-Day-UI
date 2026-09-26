@@ -129,8 +129,7 @@ useSeoMeta({
         compact
       />
     </article>
-    <NuxtLink :to="`/matches/manage?match=${match.id}`" class="back-to-matches"
-      >Operar partido</NuxtLink
+    <NuxtLink :to="`/matches/manage/${match.id}`" class="back-to-matches">Operar partido</NuxtLink
     ><OperatedMatchReport v-if="operations[match.id]" :match-id="match.id" /><MatchDetail
       v-else
       :match="match"

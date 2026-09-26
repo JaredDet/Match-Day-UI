@@ -24,6 +24,9 @@ const search = useState("matchday-search", () => "");
 const favoritesOnly = useState("matchday-favorites-only", () => false);
 const favorites = useState<string[]>("matchday-favorites", () => []);
 const route = useRoute();
+const validFavoriteCount = computed(
+  () => favorites.value.filter((id) => matches.value.some((match) => match.id === id)).length,
+);
 watch(
   () => route.query.view,
   (view) => {
@@ -248,12 +251,20 @@ useHead({ title: "Matchday · La jornada" });
         <span class="green-dot" /> Demo · Partidos y resultados ficticios
       </div>
       <div v-else class="favorites-summary">
-        <StarSolidIcon aria-hidden="true" />
-        <div>
-          <strong>{{ favorites.length }}</strong
-          ><span>{{ favorites.length === 1 ? "partido guardado" : "partidos guardados" }}</span>
+        <span class="favorites-summary-icon"><StarSolidIcon aria-hidden="true" /></span>
+        <div class="favorites-summary-copy">
+          <strong>{{ validFavoriteCount }}</strong>
+          <span>{{ validFavoriteCount === 1 ? "partido guardado" : "partidos guardados" }}</span>
         </div>
-        <button @click="showMatchDate(selectedDate)">Explorar la jornada</button>
+        <button class="favorites-explore" @click="showMatchDate(selectedDate)">
+          Explorar partidos
+          <AnimatedHeroIcon
+            :icon="ArrowUpRightIcon"
+            motion="arrow"
+            class="ui-icon"
+            aria-hidden="true"
+          />
+        </button>
       </div>
 
       <div class="day-heading">
@@ -289,7 +300,7 @@ useHead({ title: "Matchday · La jornada" });
               />
             </button>
             <time v-if="favoritesOnly" class="favorite-date" :datetime="match.scheduled_at">
-              {{ favoriteDate(match.scheduled_at) }} · {{ time(match.scheduled_at) }}
+              {{ favoriteDate(match.scheduled_at) }}
             </time>
           </div>
           <div class="fixture">
@@ -368,7 +379,7 @@ useHead({ title: "Matchday · La jornada" });
         <span class="empty-icon">◇</span>
         <h3>
           {{
-            favoritesOnly && !favorites.length
+            favoritesOnly && !validFavoriteCount
               ? "Todavía no guardas partidos"
               : !dated.length
                 ? "No hay partidos programados para este día"
@@ -377,7 +388,7 @@ useHead({ title: "Matchday · La jornada" });
         </h3>
         <p>
           {{
-            favoritesOnly && !favorites.length
+            favoritesOnly && !validFavoriteCount
               ? "Usa la estrella de un partido para encontrarlo luego en esta sección."
               : !dated.length
                 ? nextMatchDate
@@ -529,8 +540,8 @@ button:hover {
   flex-shrink: 0;
 }
 main {
-  max-width: 1280px;
-  padding: 0 44px;
+  max-width: 1380px;
+  padding: 0 64px;
   margin: auto;
 }
 .intro {
@@ -542,79 +553,94 @@ main {
 .favorites-page .intro {
   position: relative;
   overflow: hidden;
-  min-height: 250px;
+  min-height: 176px;
+  margin: 28px 0 30px;
+  padding: 34px 38px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
   background:
     radial-gradient(
-      circle at 88% 30%,
-      color-mix(in srgb, var(--accent) 24%, transparent),
-      transparent 32%
+      circle at 91% 20%,
+      color-mix(in srgb, var(--accent) 16%, transparent),
+      transparent 28%
     ),
-    linear-gradient(135deg, var(--surface), color-mix(in srgb, var(--surface) 82%, var(--accent)));
+    linear-gradient(120deg, var(--surface), color-mix(in srgb, var(--surface) 91%, var(--accent)));
 }
 .favorites-page .intro::after {
   content: "★";
   position: absolute;
-  right: 8%;
+  right: 5%;
   top: 50%;
-  transform: translateY(-52%) rotate(8deg);
-  color: color-mix(in srgb, var(--accent) 18%, transparent);
-  font-size: clamp(120px, 18vw, 240px);
+  transform: translateY(-50%) rotate(7deg);
+  color: color-mix(in srgb, var(--accent) 12%, transparent);
+  font-size: clamp(92px, 11vw, 150px);
   line-height: 1;
 }
 .favorites-summary {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 14px;
-  margin: 24px 0 30px;
-  padding: 18px 20px;
+  gap: 12px;
+  margin: 20px 0 28px;
+  padding: 14px 16px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--surface);
 }
-.favorites-summary > svg {
-  width: 28px;
+.favorites-summary-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
   color: var(--accent);
 }
-.favorites-summary div {
+.favorites-summary-icon svg {
+  width: 19px;
+}
+.favorites-summary-copy {
   display: flex;
   align-items: baseline;
   gap: 8px;
 }
 .favorites-summary strong {
-  font-size: 24px;
+  font-size: 20px;
   color: var(--accent);
 }
 .favorites-summary span {
   color: var(--muted);
 }
+.favorites-explore {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-color);
+  font-size: 11px;
+}
 .favorites-page .match-grid {
-  grid-template-columns: 1fr;
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
 }
 .favorites-page .match-card {
-  display: grid;
-  grid-template-columns: minmax(190px, 0.4fr) 1fr;
-  align-items: stretch;
-  min-height: 170px;
-  border-left: 3px solid var(--accent);
+  min-height: 235px;
+  border-top: 2px solid color-mix(in srgb, var(--accent) 72%, var(--border));
 }
 .favorites-page .match-card .card-top {
-  grid-column: 1;
-  grid-row: 1 / span 2;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 14px;
-  padding: 24px;
-  border-right: 1px solid var(--border);
+  justify-content: flex-start;
+  gap: 10px;
+  min-height: 48px;
+  padding: 16px 48px 0 18px;
 }
 .favorites-page .match-card .fixture {
-  grid-column: 2;
-  padding: 26px 36px;
+  padding: 20px 24px 24px;
 }
-.favorites-page .match-card .scorers {
-  grid-column: 2;
+.favorites-page .match-card .favorite-date {
+  color: var(--muted);
 }
 .favorite-date {
   color: var(--muted);
@@ -623,14 +649,25 @@ main {
   text-transform: capitalize;
 }
 @media (max-width: 700px) {
+  .favorites-page .intro {
+    min-height: 160px;
+    margin: 18px 0 24px;
+    padding: 26px 22px;
+  }
+  .favorites-page .intro::after {
+    right: -18px;
+    font-size: 100px;
+  }
+  .favorites-page .match-grid {
+    grid-template-columns: 1fr;
+  }
   .favorites-page .match-card {
-    display: block;
+    min-height: 0;
   }
   .favorites-page .match-card .card-top {
     flex-direction: row;
     align-items: center;
-    justify-content: space-between;
-    border-right: 0;
+    justify-content: flex-start;
   }
   .favorites-summary {
     grid-template-columns: auto 1fr;

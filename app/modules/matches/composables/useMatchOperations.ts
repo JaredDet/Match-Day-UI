@@ -71,6 +71,10 @@ export function useMatchOperations() {
     ),
   );
   const roster = (teamId: string) => rosters.value[teamId] ?? [];
+  async function loadTeamFormations(teamId: string) {
+    if (!teamId || formations.value[teamId]) return;
+    formations.value[teamId] = await repositories.teams.listFormations(teamId);
+  }
   async function refresh(id?: string) {
     await catalog.refresh();
     if (id) details.value[id] = (await repositories.matches.get(id)) as ApiMatch;
@@ -91,10 +95,20 @@ export function useMatchOperations() {
     );
     return operations.value[id]!;
   }
-  async function create(home: string, away: string, date: string) {
+  async function create(
+    home: string,
+    away: string,
+    date: string,
+    selectedFormations?: { home: string; away: string },
+  ) {
     if (!home || !away || home === away) throw new Error("Selecciona dos equipos distintos.");
     if (!Number.isFinite(Date.parse(date))) throw new Error("Selecciona una fecha válida.");
-    const id = await repositories.matches.create(home, away, new Date(date).toISOString());
+    const id = await repositories.matches.create(
+      home,
+      away,
+      new Date(date).toISOString(),
+      selectedFormations,
+    );
     await refresh(id);
     return id;
   }
@@ -178,6 +192,15 @@ export function useMatchOperations() {
     }
     await refresh(id);
   }
+  async function setAddedTime(id: string, minutes: number) {
+    const match = details.value[id] ?? ((await repositories.matches.get(id)) as ApiMatch);
+    if (!match.current_period) throw new Error("El partido no tiene un periodo activo.");
+    await repositories.matches.command(id, "periods/added-time/", "PATCH", {
+      expected_period: match.current_period,
+      minutes,
+    });
+    await refresh(id);
+  }
   async function event(
     id: string,
     _side: Side,
@@ -208,6 +231,51 @@ export function useMatchOperations() {
       });
     await refresh(id);
   }
+  async function statistic(
+    id: string,
+    side: Side,
+    kind: "foul" | "corner" | "offside" | "injury" | "shot" | "penalty_attempt" | "var",
+    minute: number,
+    options: {
+      player?: string;
+      outcome?: string;
+      goalkeeper?: string;
+      reason?: string;
+      decision?: string;
+    } = {},
+  ) {
+    const paths = {
+      foul: "fouls/",
+      corner: "corners/",
+      offside: "offsides/",
+      injury: "injuries/",
+      shot: "shots/",
+      penalty_attempt: "penalty-attempts/",
+      var: "var-reviews/",
+    } as const;
+    const payload =
+      kind === "var"
+        ? { team_side: side, reason: options.reason, decision: options.decision, minute }
+        : {
+            player_id: options.player,
+            minute,
+            ...(kind === "shot"
+              ? {
+                  outcome: options.outcome,
+                  goalkeeper_id: options.outcome === "saved" ? options.goalkeeper : undefined,
+                }
+              : {}),
+            ...(kind === "penalty_attempt" ? { outcome: options.outcome } : {}),
+          };
+    await repositories.matches.command(id, paths[kind], "POST", payload);
+    await refresh(id);
+  }
+  async function possession(id: string, homePercentage: number) {
+    await repositories.matches.command(id, "possession/", "PATCH", {
+      home_percentage: homePercentage,
+    });
+    await refresh(id);
+  }
   async function cancel(id: string, eventId: string) {
     const item = operations.value[id]?.events.find((event) => event.id === eventId);
     if (!item) throw new Error("Evento no encontrado.");
@@ -230,20 +298,29 @@ export function useMatchOperations() {
     });
     await refresh(id);
   }
+  async function finishShootout(id: string) {
+    await repositories.matches.command(id, "penalty-shootout/finish/", "POST");
+    await refresh(id);
+  }
   return {
     matches,
     operations,
     roster,
     formations,
+    loadTeamFormations,
     create,
     prepare,
     lineup,
     changeFormation,
     activePlayers,
     period,
+    setAddedTime,
     event,
+    statistic,
+    possession,
     cancel,
     shootout,
     kick,
+    finishShootout,
   };
 }

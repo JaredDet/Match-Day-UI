@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { positionNames } from "~/modules/teams/data/teamProfiles";
+import { positionNames } from "~/modules/teams/data/position-names";
 import type { Position } from "~/modules/teams/types/teams";
 import { useTeams } from "~/modules/teams/composables/useTeams";
 import { useRepositories } from "~/core/api/repository-context";

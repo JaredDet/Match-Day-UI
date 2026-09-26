@@ -6,7 +6,8 @@ import { useTeams } from "~/modules/teams/composables/useTeams";
 import { useRepositories } from "~/core/api/repository-context";
 
 import { newsDate } from "~/modules/news/data/news";
-import { positionNames, resultNames } from "~/modules/teams/data/teamProfiles";
+import { positionNames } from "~/modules/teams/data/position-names";
+import { resultNames } from "~/modules/teams/data/teamProfiles";
 const resultLetters = { win: "V", draw: "E", loss: "D" } as const;
 const { items: publishedNews } = useNews("PUBLISHED");
 const route = useRoute();

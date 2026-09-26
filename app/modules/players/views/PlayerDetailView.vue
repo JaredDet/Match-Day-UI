@@ -1,7 +1,8 @@
 ﻿<script setup lang="ts">
 import { useRepositories } from "~/core/api/repository-context";
 
-import { positionNames, resultNames } from "~/modules/teams/data/teamProfiles";
+import { positionNames } from "~/modules/teams/data/position-names";
+import { resultNames } from "~/modules/teams/data/teamProfiles";
 const route = useRoute(),
   repository = useRepositories().teams;
 const { data: player } = await useAsyncData(`player-detail-${route.params.id}`, () =>

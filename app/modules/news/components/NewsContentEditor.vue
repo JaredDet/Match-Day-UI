@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Node } from "@tiptap/core";
 import Bold from "@tiptap/extension-bold";
 import CharacterCount from "@tiptap/extension-character-count";
 import Document from "@tiptap/extension-document";
@@ -7,6 +8,19 @@ import Italic from "@tiptap/extension-italic";
 import Paragraph from "@tiptap/extension-paragraph";
 import Text from "@tiptap/extension-text";
 import { EditorContent, useEditor } from "@tiptap/vue-3";
+
+function headingExtension(level: 1 | 2 | 3 | 4) {
+  return Node.create({
+    name: `heading${level}`,
+    group: "block",
+    content: "inline*",
+    defining: true,
+    parseHTML: () => [{ tag: `h${level}` }],
+    renderHTML: ({ HTMLAttributes }) => [`h${level}`, HTMLAttributes, 0],
+  });
+}
+
+const headingLevels = [1, 2, 3, 4] as const;
 
 const props = withDefaults(
   defineProps<{
@@ -25,7 +39,10 @@ function backendToHtml(value: string) {
   if (!value) return "";
   return value
     .split(/\n\s*\n/)
-    .map((paragraph) => `<p>${paragraph.replaceAll("\n", "<br>")}</p>`)
+    .map((block) => {
+      if (/^<(h[1-4])>[\s\S]*<\/\1>$/.test(block)) return block;
+      return `<p>${block.replaceAll("\n", "<br>")}</p>`;
+    })
     .join("");
 }
 
@@ -35,7 +52,9 @@ function htmlToBackend(value: string) {
     .replaceAll("</strong>", "</b>")
     .replaceAll("<em>", "<i>")
     .replaceAll("</em>", "</i>")
-    .replace(/<p>([\s\S]*?)<\/p>/g, "$1\n\n")
+    .replace(/<(p|h[1-4])>([\s\S]*?)<\/\1>/g, (_match, tag: string, content: string) =>
+      tag === "p" ? `${content}\n\n` : `<${tag}>${content}</${tag}>\n\n`,
+    )
     .replace(/<br\s*\/?>/g, "\n")
     .replace(/\n+$/, "");
 }
@@ -50,6 +69,7 @@ const editor = useEditor({
     HardBreak,
     Bold,
     Italic,
+    ...headingLevels.map(headingExtension),
     CharacterCount.configure({ limit: props.limit }),
   ],
   editorProps: {
@@ -128,6 +148,28 @@ onBeforeUnmount(() => editor.value?.destroy());
       >
         <em>C</em>
       </button>
+      <button
+        type="button"
+        title="Párrafo normal"
+        aria-label="Aplicar párrafo normal"
+        :class="{ active: editor.isActive('paragraph') }"
+        :aria-pressed="editor.isActive('paragraph')"
+        @click="editor.chain().focus().setNode('paragraph').run()"
+      >
+        P
+      </button>
+      <button
+        v-for="level in headingLevels"
+        :key="level"
+        type="button"
+        :title="`Encabezado ${level}`"
+        :aria-label="`Aplicar encabezado nivel ${level}`"
+        :class="{ active: editor.isActive(`heading${level}`) }"
+        :aria-pressed="editor.isActive(`heading${level}`)"
+        @click="editor.chain().focus().setNode(`heading${level}`).run()"
+      >
+        H{{ level }}
+      </button>
       <span>Selecciona texto o activa el formato antes de escribir</span>
     </div>
     <EditorContent :editor="editor" :class="{ invalid: limitAttempted }" />
@@ -164,6 +206,7 @@ onBeforeUnmount(() => editor.value?.destroy());
 }
 .format-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   padding: 8px;
@@ -214,6 +257,27 @@ onBeforeUnmount(() => editor.value?.destroy());
 }
 :deep(.content-editor p + p) {
   margin-top: 1em;
+}
+:deep(.content-editor h1),
+:deep(.content-editor h2),
+:deep(.content-editor h3),
+:deep(.content-editor h4) {
+  margin: 1em 0 0.5em;
+  color: var(--text-color);
+  font-weight: 700;
+  line-height: 1.3;
+}
+:deep(.content-editor h1) {
+  font-size: 1.6em;
+}
+:deep(.content-editor h2) {
+  font-size: 1.4em;
+}
+:deep(.content-editor h3) {
+  font-size: 1.2em;
+}
+:deep(.content-editor h4) {
+  font-size: 1.05em;
 }
 :deep(.content-editor i),
 :deep(.content-editor em) {
